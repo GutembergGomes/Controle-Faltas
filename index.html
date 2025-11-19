@@ -621,6 +621,38 @@
         <div id="relatorios-content" class="tab-content">
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
                 <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6">Relatórios e Análises</h2>
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Relatórios Rápidos</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button onclick="gerarRelatorioRapido('faltas_hoje')" 
+                                class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition duration-200">
+                            <i class="fas fa-calendar-day text-blue-500 text-xl mb-2"></i>
+                            <div class="font-medium text-blue-900 dark:text-blue-300">Faltas de Hoje</div>
+                            <div class="text-sm text-blue-600 dark:text-blue-400">Visualizar faltas do dia atual</div>
+                        </button>
+                        
+                        <button onclick="gerarRelatorioRapido('banco_horas_mes')" 
+                                class="p-4 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition duration-200">
+                            <i class="fas fa-clock text-cyan-500 text-xl mb-2"></i>
+                            <div class="font-medium text-cyan-900 dark:text-cyan-300">Banco de Horas</div>
+                            <div class="text-sm text-cyan-600 dark:text-cyan-400">Registros deste mês</div>
+                        </button>
+                        
+                        <button onclick="gerarRelatorioRapido('faltas_semana')" 
+                                class="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition duration-200">
+                            <i class="fas fa-calendar-week text-green-500 text-xl mb-2"></i>
+                            <div class="font-medium text-green-900 dark:text-green-300">Faltas da Semana</div>
+                            <div class="text-sm text-green-600 dark:text-green-400">Últimos 7 dias</div>
+                        </button>
+                        
+                        <button onclick="gerarRelatorioRapido('atestados_mes')" 
+                                class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition duration-200">
+                            <i class="fas fa-file-medical text-yellow-500 text-xl mb-2"></i>
+                            <div class="font-medium text-yellow-900 dark:text-yellow-300">Atestados do Mês</div>
+                            <div class="text-sm text-yellow-600 dark:text-yellow-400">Atestados deste mês</div>
+                        </button>
+                    </div>
+                </div>
                 
                 <!-- Filtros de Relatório -->
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -702,39 +734,9 @@
                     </div>
                 </div>
 
-                <!-- Relatórios Rápidos -->
-                <div class="mt-8">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Relatórios Rápidos</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <button onclick="gerarRelatorioRapido('faltas_hoje')" 
-                                class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition duration-200">
-                            <i class="fas fa-calendar-day text-blue-500 text-xl mb-2"></i>
-                            <div class="font-medium text-blue-900 dark:text-blue-300">Faltas de Hoje</div>
-                            <div class="text-sm text-blue-600 dark:text-blue-400">Visualizar faltas do dia atual</div>
-                        </button>
-                        
-                        <button onclick="gerarRelatorioRapido('banco_horas_mes')" 
-                                class="p-4 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition duration-200">
-                            <i class="fas fa-clock text-cyan-500 text-xl mb-2"></i>
-                            <div class="font-medium text-cyan-900 dark:text-cyan-300">Banco de Horas</div>
-                            <div class="text-sm text-cyan-600 dark:text-cyan-400">Registros deste mês</div>
-                        </button>
-                        
-                        <button onclick="gerarRelatorioRapido('faltas_semana')" 
-                                class="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition duration-200">
-                            <i class="fas fa-calendar-week text-green-500 text-xl mb-2"></i>
-                            <div class="font-medium text-green-900 dark:text-green-300">Faltas da Semana</div>
-                            <div class="text-sm text-green-600 dark:text-green-400">Últimos 7 dias</div>
-                        </button>
-                        
-                        <button onclick="gerarRelatorioRapido('atestados_mes')" 
-                                class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition duration-200">
-                            <i class="fas fa-file-medical text-yellow-500 text-xl mb-2"></i>
-                            <div class="font-medium text-yellow-900 dark:text-yellow-300">Atestados do Mês</div>
-                            <div class="text-sm text-yellow-600 dark:text-yellow-400">Atestados deste mês</div>
-                        </button>
-                    </div>
-                </div>
+                
+
+                
             </div>
         </div>
 
@@ -3667,10 +3669,11 @@
 
             let conteudoHtml = '';
             let tituloRelatorio = `Relatório de ${getTipoRelatorioLabel(tipo)}`;
-            
-            // Adicionar informação da frente ao título se filtrada
             if (frenteSelecionada !== 'todas') {
                 tituloRelatorio += ` - Frente: ${frenteSelecionada}`;
+            }
+            if (liderSelecionado !== 'todos') {
+                tituloRelatorio += ` - Líder: ${liderSelecionado}`;
             }
 
             switch(tipo) {
@@ -3965,44 +3968,175 @@
 
         function gerarRelatorioRapido(tipo) {
             const hoje = new Date();
-            let dataInicial, dataFinal, titulo, tipoRelatorio;
-            
+            let dataInicialDate, dataFinalDate, titulo;
             switch(tipo) {
                 case 'faltas_hoje':
-                    dataInicial = hoje.toISOString().split('T')[0];
-                    dataFinal = dataInicial;
-                    titulo = 'Faltas de Hoje';
-                    tipoRelatorio = 'faltas_geral';
+                    dataInicialDate = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+                    dataFinalDate = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+                    titulo = 'Relatório de Faltas - Hoje';
                     break;
                 case 'faltas_semana':
-                    const umaSemanaAtras = new Date(hoje);
-                    umaSemanaAtras.setDate(hoje.getDate() - 7);
-                    dataInicial = umaSemanaAtras.toISOString().split('T')[0];
-                    dataFinal = hoje.toISOString().split('T')[0];
-                    titulo = 'Faltas da Última Semana';
-                    tipoRelatorio = 'faltas_geral';
+                    dataFinalDate = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+                    dataInicialDate = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - 7);
+                    titulo = 'Relatório de Faltas - Últimos 7 dias';
                     break;
                 case 'atestados_mes':
-                    dataInicial = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
-                    dataFinal = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0];
-                    titulo = 'Atestados Médicos do Mês';
-                    tipoRelatorio = 'atestados';
+                    dataInicialDate = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+                    dataFinalDate = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+                    titulo = 'Relatório de Atestados - Mês atual';
                     break;
                 case 'banco_horas_mes':
-                    dataInicial = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
-                    dataFinal = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0];
-                    titulo = 'Banco de Horas do Mês';
-                    tipoRelatorio = 'faltas_motivo';
+                    dataInicialDate = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+                    dataFinalDate = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+                    titulo = 'Relatório - Banco de Horas (Mês atual)';
                     break;
                 default:
                     return;
             }
-            
-            document.getElementById('tipo-relatorio').value = tipoRelatorio;
-            document.getElementById('relatorio-data-inicial').value = dataInicial.substring(0, 7);
-            document.getElementById('relatorio-data-final').value = dataFinal.substring(0, 7);
-            
-            gerarRelatorio();
+
+            const frenteSelecionada = document.getElementById('filtro-frente-relatorio').value;
+            const liderSelecionado = document.getElementById('filtro-lider-relatorio').value;
+
+            let faltasNoPeriodo = faltas.filter(f => {
+                const dataFalta = new Date(f.data + 'T12:00:00');
+                return dataFalta >= dataInicialDate && dataFalta <= dataFinalDate;
+            });
+
+            if (frenteSelecionada !== 'todas') {
+                faltasNoPeriodo = faltasNoPeriodo.filter(f => {
+                    const funcionario = funcionarios.find(func => func.cadastro.toString() === f.matricula);
+                    return funcionario && funcionario.frente === frenteSelecionada;
+                });
+            }
+
+            if (liderSelecionado !== 'todos') {
+                faltasNoPeriodo = faltasNoPeriodo.filter(f => {
+                    const funcionario = funcionarios.find(func => func.cadastro.toString() === f.matricula);
+                    return funcionario && (funcionario.lider || '').trim() === liderSelecionado;
+                });
+            }
+
+            let conteudoHtml = '';
+            if (tipo === 'atestados_mes') {
+                const atestados = faltasNoPeriodo.filter(f => f.motivo === 'atestado-medico');
+                conteudoHtml = `
+                    <p>Total de Atestados: <strong>${atestados.length}</strong></p>
+                    <h4 class="text-md font-semibold mt-4 mb-2">Detalhes dos Atestados:</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full table-auto text-sm">
+                            <thead>
+                                <tr class="bg-gray-100 dark:bg-gray-600">
+                                    <th class="px-3 py-2 text-left">Data</th>
+                                    <th class="px-3 py-2 text-left">Funcionário</th>
+                                    <th class="px-3 py-2 text-left">Matrícula</th>
+                                    <th class="px-3 py-2 text-left">Frente</th>
+                                    <th class="px-3 py-2 text-left">Dias</th>
+                                    <th class="px-3 py-2 text-left">Observações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${atestados.map(f => {
+                                    const funcionario = funcionarios.find(func => func.cadastro.toString() === f.matricula);
+                                    const frente = funcionario ? funcionario.frente : '-';
+                                    return `
+                                        <tr class="border-b border-gray-200 dark:border-gray-700">
+                                            <td class="px-3 py-2">${formatarDataParaExibicao(f.data)}</td>
+                                            <td class="px-3 py-2">${f.nomeFuncionario}</td>
+                                            <td class="px-3 py-2">${f.matricula}</td>
+                                            <td class="px-3 py-2">${frente}</td>
+                                            <td class="px-3 py-2">${f.diasAtestado || '-'}</td>
+                                            <td class="px-3 py-2">${f.observacoes || '-'}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else if (tipo === 'banco_horas_mes') {
+                const registros = faltasNoPeriodo.filter(f => f.motivo === 'banco-horas');
+                conteudoHtml = `
+                    <p>Total de Registros de Banco de Horas: <strong>${registros.length}</strong></p>
+                    <h4 class="text-md font-semibold mt-4 mb-2">Detalhes:</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full table-auto text-sm">
+                            <thead>
+                                <tr class="bg-gray-100 dark:bg-gray-600">
+                                    <th class="px-3 py-2 text-left">Data</th>
+                                    <th class="px-3 py-2 text-left">Funcionário</th>
+                                    <th class="px-3 py-2 text-left">Matrícula</th>
+                                    <th class="px-3 py-2 text-left">Frente</th>
+                                    <th class="px-3 py-2 text-left">Motivo</th>
+                                    <th class="px-3 py-2 text-left">Observações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${registros.map(f => {
+                                    const funcionario = funcionarios.find(func => func.cadastro.toString() === f.matricula);
+                                    const frente = funcionario ? funcionario.frente : '-';
+                                    return `
+                                        <tr class="border-b border-gray-200 dark:border-gray-700">
+                                            <td class="px-3 py-2">${formatarDataParaExibicao(f.data)}</td>
+                                            <td class="px-3 py-2">${f.nomeFuncionario}</td>
+                                            <td class="px-3 py-2">${f.matricula}</td>
+                                            <td class="px-3 py-2">${frente}</td>
+                                            <td class="px-3 py-2">${getMotivoLabel(f.motivo)}</td>
+                                            <td class="px-3 py-2">${f.observacoes || '-'}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                const total = faltasNoPeriodo.length;
+                const injustificadas = faltasNoPeriodo.filter(f => f.motivo === 'falta-injustificada').length;
+                const justificadas = total - injustificadas;
+                conteudoHtml = `
+                    <p>Total de Faltas: <strong>${total}</strong></p>
+                    <p>Faltas Justificadas: <strong>${justificadas}</strong></p>
+                    <p>Faltas Injustificadas: <strong>${injustificadas}</strong></p>
+                    <h4 class="text-md font-semibold mt-4 mb-2">Detalhes das Faltas:</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full table-auto text-sm">
+                            <thead>
+                                <tr class="bg-gray-100 dark:bg-gray-600">
+                                    <th class="px-3 py-2 text-left">Data</th>
+                                    <th class="px-3 py-2 text-left">Funcionário</th>
+                                    <th class="px-3 py-2 text-left">Matrícula</th>
+                                    <th class="px-3 py-2 text-left">Frente</th>
+                                    <th class="px-3 py-2 text-left">Motivo</th>
+                                    <th class="px-3 py-2 text-left">Observações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${faltasNoPeriodo.map(f => {
+                                    const funcionario = funcionarios.find(func => func.cadastro.toString() === f.matricula);
+                                    const frente = funcionario ? funcionario.frente : '-';
+                                    return `
+                                        <tr class="border-b border-gray-200 dark:border-gray-700">
+                                            <td class="px-3 py-2">${formatarDataParaExibicao(f.data)}</td>
+                                            <td class="px-3 py-2">${f.nomeFuncionario}</td>
+                                            <td class="px-3 py-2">${f.matricula}</td>
+                                            <td class="px-3 py-2">${frente}</td>
+                                            <td class="px-3 py-2">${getMotivoLabel(f.motivo)}</td>
+                                            <td class="px-3 py-2">${f.observacoes || '-'}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            if (frenteSelecionada !== 'todas') titulo += ` - Frente: ${frenteSelecionada}`;
+            if (liderSelecionado !== 'todos') titulo += ` - Líder: ${liderSelecionado}`;
+            document.getElementById('titulo-relatorio').textContent = titulo;
+            document.getElementById('conteudo-relatorio').innerHTML = conteudoHtml;
+            document.getElementById('area-relatorio').classList.remove('hidden');
+            showMessage('Relatório gerado com sucesso!', 'success');
         }
 
         function imprimirRelatorio() {
