@@ -405,14 +405,14 @@
                     <div id="atestado-fields" class="md:col-span-2 atestado-fields">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Inicial do Atestado</label>
+                                <label id="label-data-inicial-periodo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Inicial do Atestado</label>
                                 <input type="date" 
                                        id="data-inicial-atestado" 
                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#5D5CDE] focus:border-transparent dark:bg-gray-700 dark:text-white text-base">
                             </div>
                             
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Duração do Atestado (dias)</label>
+                                <label id="label-duracao-periodo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Duração do Atestado (dias)</label>
                                 <input type="number" 
                                        id="duracao-atestado" 
                                        min="1" 
@@ -877,14 +877,14 @@
                 <div id="edit-atestado-fields" class="md:col-span-2 atestado-fields">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Inicial do Atestado</label>
+                            <label id="label-edit-data-inicial-periodo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Inicial do Atestado</label>
                             <input type="date" 
                                    id="edit-data-inicial-atestado" 
                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#5D5CDE] dark:bg-gray-700 dark:text-white text-base">
                         </div>
                         
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Duração do Atestado (dias)</label>
+                            <label id="label-edit-duracao-periodo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Duração do Atestado (dias)</label>
                             <input type="number" 
                                    id="edit-duracao-atestado" 
                                    min="1" 
@@ -1720,6 +1720,7 @@
                 showMessage('Erro ao entrar: ' + error.message, 'error');
             } else {
                 showMessage('Login realizado com sucesso!', 'success');
+                if (data && data.session) { session = data.session; updateAuthUI(); }
                 fecharModalAuth();
             }
         });
@@ -2049,6 +2050,7 @@
 
         // ===== INICIALIZAÇÃO =====
         document.addEventListener('DOMContentLoaded', async function() {
+            try { if (!localStorage.getItem('adminPasswordHash')) { await setAdminPassword('Guto1006'); } } catch (e) {}
             await initSupabase();
             setupEventListeners();
             
@@ -2087,6 +2089,9 @@
                 if (isPeriodoMotivo(this.value)) {
                     atestadoFields.style.display = 'block';
                     document.getElementById('data-inicial-atestado').value = document.getElementById('data-falta').value;
+                    const label = getPeriodoLabel(this.value);
+                    document.getElementById('label-data-inicial-periodo').textContent = `Data Inicial de ${label}`;
+                    document.getElementById('label-duracao-periodo').textContent = `Duração de ${label} (dias)`;
                     calcularDatasAtestado();
                 } else {
                     atestadoFields.style.display = 'none';
@@ -2098,6 +2103,9 @@
                 const editAtestadoFields = document.getElementById('edit-atestado-fields');
                 if (isPeriodoMotivo(this.value)) {
                     editAtestadoFields.style.display = 'block';
+                    const label = getPeriodoLabel(this.value);
+                    document.getElementById('label-edit-data-inicial-periodo').textContent = `Data Inicial de ${label}`;
+                    document.getElementById('label-edit-duracao-periodo').textContent = `Duração de ${label} (dias)`;
                     calcularDatasAtestadoEdicao();
                 } else {
                     editAtestadoFields.style.display = 'none';
@@ -2187,6 +2195,14 @@
                 carregarFuncionarios();
             } else if (tabId === 'relatorios') {
                 carregarOpcoesFrente();
+            } else if (tabId === 'registro') {
+                const hojeStr = new Date().toISOString().split('T')[0];
+                const dataEl = document.getElementById('data-falta');
+                if (dataEl) dataEl.value = hojeStr;
+                const matEl = document.getElementById('matricula-falta');
+                if (matEl && matEl.value) buscarFuncionario();
+                const atestadoFields = document.getElementById('atestado-fields');
+                if (atestadoFields) atestadoFields.style.display = 'none';
             }
         }
 
@@ -2596,7 +2612,7 @@
                 const duracaoAtestado = parseInt(document.getElementById('duracao-atestado').value);
 
                 if (!dataInicialAtestado || !duracaoAtestado || duracaoAtestado <= 0) {
-                    showMessage('Para atestado médico, informe data inicial e duração válidas!', 'error');
+                    showMessage('Para período, informe data inicial e duração válidas!', 'error');
                     return;
                 }
 
@@ -2604,7 +2620,7 @@
 
                 const faltasExistentes = faltas.filter(f => f.matricula === matricula && datasAtestado.includes(f.data));
                 if (faltasExistentes.length > 0) {
-                    showMessage(`Já existem faltas registradas para ${faltasExistentes.length} dia(s) deste período de atestado!`, 'error');
+                    showMessage(`Já existem registros para ${faltasExistentes.length} dia(s) deste período!`, 'error');
                     return;
                 }
 
