@@ -308,6 +308,10 @@
                             <option value="com-frente-turno">Com frente e turno</option>
                             <option value="sem-frente-turno">Sem frente ou turno</option>
                         </select>
+                        <select id="filtro-lider"
+                                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#5D5CDE] dark:bg-gray-700 dark:text-white text-base">
+                            <option value="todos">Todos os líderes</option>
+                        </select>
                         <span id="total-funcionarios" class="text-sm text-gray-600 dark:text-gray-400 font-medium"></span>
                         <button id="btn-novo-funcionario" 
                                 class="px-4 py-2 bg-[#5D5CDE] text-white rounded-lg hover:bg-[#4A4BC9] transition">
@@ -654,6 +658,14 @@
                                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#5D5CDE] dark:bg-gray-600 dark:text-white text-base">
                             <option value="todas">Todas as Frentes</option>
                             <!-- Opções serão preenchidas via JavaScript -->
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Líder</label>
+                        <select id="filtro-lider-relatorio" 
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#5D5CDE] dark:bg-gray-600 dark:text-white text-base">
+                            <option value="todos">Todos os Líderes</option>
                         </select>
                     </div>
                     
@@ -1713,6 +1725,7 @@
         // ===== FUNÇÕES DO BANCO DE DADOS =====
         async function carregarFuncionariosDB() {
             try {
+                if (!sb) throw new Error('Supabase indisponível');
                 const { data, error } = await sb
                     .from('funcionarios')
                     .select('empresa,cadastro,nome,cargo,descricaolocal,frente,turno,lider,admissao')
@@ -1826,6 +1839,7 @@
 
         async function salvarFuncionarioDB(funcionario) {
             try {
+                if (!sb || !session) return true;
                 const { data, error } = await sb
                     .from('funcionarios')
                     .upsert({
@@ -1852,6 +1866,7 @@
 
         async function excluirFuncionarioDB(cadastro) {
             try {
+                if (!sb || !session) return true;
                 const { error } = await sb
                     .from('funcionarios')
                     .delete()
@@ -1868,6 +1883,7 @@
 
         async function salvarFaltaDB(falta) {
             try {
+                if (!sb || !session) return true;
                 const { data, error } = await sb
                     .from('faltas')
                     .upsert({
@@ -1899,6 +1915,7 @@
 
         async function excluirFaltaDB(faltaId) {
             try {
+                if (!sb || !session) return true;
                 const { error } = await sb
                     .from('faltas')
                     .delete()
@@ -1988,6 +2005,28 @@
             return motivos[motivo] || motivo;
         }
 
+        function isPeriodoMotivo(motivo) {
+            const set = new Set(['atestado-medico', 'ferias', 'banco-horas', 'licenca-maternidade', 'licenca-paternidade', 'licenca-medica']);
+            return set.has(motivo);
+        }
+
+        function isFaltaMotivo(motivo) {
+            const naoFalta = new Set(['banco-horas', 'dispensa-chuva', 'abono', 'ferias']);
+            return !naoFalta.has(motivo);
+        }
+
+        function getPeriodoLabel(motivo) {
+            const map = {
+                'atestado-medico': 'Atestado',
+                'ferias': 'Férias',
+                'banco-horas': 'Banco de Horas',
+                'licenca-maternidade': 'Licença Maternidade',
+                'licenca-paternidade': 'Licença Paternidade',
+                'licenca-medica': 'Licença Médica'
+            };
+            return map[motivo] || 'Período';
+        }
+
         function adicionarRegistroHistorico(tipo, descricao, detalhes = '') {
             const registro = {
                 tipo,
@@ -2035,6 +2074,7 @@
             
             // Filtro de frente e turno
             document.getElementById('filtro-frente-turno').addEventListener('change', filtrarFuncionarios);
+            document.getElementById('filtro-lider').addEventListener('change', filtrarFuncionarios);
             
             // Busca de matrícula no formulário de falta
             document.getElementById('matricula-falta').addEventListener('input', debounce(buscarFuncionario, 300));
@@ -2042,7 +2082,7 @@
             // Mostrar/ocultar campos de atestado médico no registro
             document.getElementById('motivo-falta').addEventListener('change', function() {
                 const atestadoFields = document.getElementById('atestado-fields');
-                if (this.value === 'atestado-medico') {
+                if (isPeriodoMotivo(this.value)) {
                     atestadoFields.style.display = 'block';
                     document.getElementById('data-inicial-atestado').value = document.getElementById('data-falta').value;
                     calcularDatasAtestado();
@@ -2054,7 +2094,7 @@
             // Mostrar/ocultar campos de atestado médico na edição
             document.getElementById('edit-motivo').addEventListener('change', function() {
                 const editAtestadoFields = document.getElementById('edit-atestado-fields');
-                if (this.value === 'atestado-medico') {
+                if (isPeriodoMotivo(this.value)) {
                     editAtestadoFields.style.display = 'block';
                     calcularDatasAtestadoEdicao();
                 } else {
@@ -2173,6 +2213,7 @@
         // ===== FUNCIONÁRIOS =====
         function carregarFuncionarios() {
             // Alterado: usa filtragem no array e paginação para renderizar
+            carregarOpcoesLider();
             funcionariosFiltrados = getFuncionariosFiltrados();
             renderFuncionariosPage();
         }
@@ -2180,6 +2221,7 @@
         function getFuncionariosFiltrados() {
             const search = document.getElementById('search-funcionarios').value.toLowerCase();
             const filtroFrenteTurno = document.getElementById('filtro-frente-turno').value;
+            const filtroLider = document.getElementById('filtro-lider').value;
 
             return funcionarios.filter(func => {
                 const texto = `${func.cadastro} ${func.nome} ${func.cargo} ${func.descricaoLocal} ${func.frente || ''} ${func.turno || ''} ${func.lider || ''}`.toLowerCase();
@@ -2189,6 +2231,10 @@
                     const temFrenteETurno = !!func.frente && !!func.turno;
                     if (filtroFrenteTurno === 'com-frente-turno' && !temFrenteETurno) return false;
                     if (filtroFrenteTurno === 'sem-frente-turno' && temFrenteETurno) return false;
+                }
+
+                if (filtroLider !== 'todos') {
+                    if ((func.lider || '').trim() !== filtroLider) return false;
                 }
                 return true;
             });
@@ -2272,6 +2318,21 @@
             const next = document.getElementById('func-next');
             if (prev) prev.onclick = () => { if (paginaFunc > 1) { paginaFunc--; renderFuncionariosPage(); } };
             if (next) next.onclick = () => { if (paginaFunc < totalPaginas) { paginaFunc++; renderFuncionariosPage(); } };
+        }
+
+        function carregarOpcoesLider() {
+            const select = document.getElementById('filtro-lider');
+            if (!select) return;
+            const lideres = [...new Set(funcionarios.map(f => (f.lider || '').trim()).filter(l => l))].sort();
+            const current = select.value;
+            select.innerHTML = '<option value="todos">Todos os líderes</option>';
+            lideres.forEach(l => {
+                const option = document.createElement('option');
+                option.value = l;
+                option.textContent = l;
+                select.appendChild(option);
+            });
+            if (lideres.includes(current)) select.value = current;
         }
 
         function filtrarFuncionarios() {
@@ -2528,7 +2589,7 @@
                 return;
             }
 
-            if (motivo === 'atestado-medico') {
+            if (isPeriodoMotivo(motivo)) {
                 const dataInicialAtestado = document.getElementById('data-inicial-atestado').value;
                 const duracaoAtestado = parseInt(document.getElementById('duracao-atestado').value);
 
@@ -2551,7 +2612,7 @@
                     nomeFuncionario: funcionario.nome,
                     data: dataAtestado,
                     motivo,
-                    observacoes: observacoes + ` (Atestado: ${formatarDataParaExibicao(dataInicialAtestado)} a ${formatarDataParaExibicao(datasAtestado[datasAtestado.length - 1])})`,
+                    observacoes: observacoes + ` (${getPeriodoLabel(motivo)}: ${formatarDataParaExibicao(dataInicialAtestado)} a ${formatarDataParaExibicao(datasAtestado[datasAtestado.length - 1])})`,
                     registradoEm: new Date().toISOString(),
                     diasAtestado: duracaoAtestado
                 }));
@@ -2565,10 +2626,10 @@
                     localStorage.setItem('faltas', JSON.stringify(faltas));
                     adicionarRegistroHistorico(
                         'falta', 
-                        `Atestado médico registrado: ${funcionario.nome} (${duracaoAtestado} dias)`,
+                        `${getPeriodoLabel(motivo)} registrado: ${funcionario.nome} (${duracaoAtestado} dias)`,
                         `Período: ${formatarDataParaExibicao(dataInicialAtestado)} a ${formatarDataParaExibicao(datasAtestado[datasAtestado.length-1])}`
                     );
-                    showMessage(`Atestado médico registrado com sucesso! ${novasFaltas.length} falta(s) criada(s).`, 'success');
+                    showMessage(`${getPeriodoLabel(motivo)} registrado com sucesso! ${novasFaltas.length} registro(s) criado(s).`, 'success');
                     cancelarEdicao();
                 } else {
                     showMessage('Não foi possível registrar o atestado.', 'error');
@@ -2711,10 +2772,11 @@
             const agora = new Date();
             const mesAtual = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
             
-            const totalFaltas = faltasFuncionario.length;
-            const faltasInjustificadas = faltasFuncionario.filter(f => f.motivo === 'falta-injustificada').length;
+            const faltasValidas = faltasFuncionario.filter(f => isFaltaMotivo(f.motivo));
+            const totalFaltas = faltasValidas.length;
+            const faltasInjustificadas = faltasValidas.filter(f => f.motivo === 'falta-injustificada').length;
             const faltasJustificadas = totalFaltas - faltasInjustificadas;
-            const faltasMes = faltasFuncionario.filter(f => f.data.startsWith(mesAtual)).length;
+            const faltasMes = faltasValidas.filter(f => f.data.startsWith(mesAtual)).length;
             
             document.getElementById('total-faltas').textContent = totalFaltas;
             document.getElementById('faltas-injustificadas').textContent = faltasInjustificadas;
@@ -2859,7 +2921,7 @@
             document.getElementById('edit-observacoes').value = falta.observacoes || '';
 
             const editAtestadoFields = document.getElementById('edit-atestado-fields');
-            if (falta.motivo === 'atestado-medico') {
+            if (isPeriodoMotivo(falta.motivo)) {
                 editAtestadoFields.style.display = 'block';
                 document.getElementById('edit-data-inicial-atestado').value = falta.data;
                 document.getElementById('edit-duracao-atestado').value = falta.diasAtestado || '';
@@ -2893,16 +2955,16 @@
                     modificadoEm: new Date().toISOString()
                 };
 
-                if (motivo === 'atestado-medico') {
-                    const editDataInicialAtestado = document.getElementById('edit-data-inicial-atestado').value;
-                    const editDuracaoAtestado = parseInt(document.getElementById('edit-duracao-atestado').value);
+            if (isPeriodoMotivo(motivo)) {
+                const editDataInicialAtestado = document.getElementById('edit-data-inicial-atestado').value;
+                const editDuracaoAtestado = parseInt(document.getElementById('edit-duracao-atestado').value);
 
                     if (!editDataInicialAtestado || !editDuracaoAtestado || editDuracaoAtestado <= 0) {
                         showMessage('Para atestado médico, informe data inicial e duração válidas!', 'error');
                         return;
                     }
                     faltaAtualizada.diasAtestado = editDuracaoAtestado;
-                    faltaAtualizada.observacoes = observacoes + ` (Atestado: ${formatarDataParaExibicao(editDataInicialAtestado)} a ${formatarDataParaExibicao(gerarDatasPeriodo(editDataInicialAtestado, editDuracaoAtestado)[editDuracaoAtestado-1])})`;
+                    faltaAtualizada.observacoes = observacoes + ` (${getPeriodoLabel(motivo)}: ${formatarDataParaExibicao(editDataInicialAtestado)} a ${formatarDataParaExibicao(gerarDatasPeriodo(editDataInicialAtestado, editDuracaoAtestado)[editDuracaoAtestado-1])})`;
                 } else {
                     faltaAtualizada.diasAtestado = null;
                 }
@@ -3179,28 +3241,30 @@
                 const dataFalta = new Date(f.data + 'T12:00:00');
                 return dataFalta >= dataInicio && dataFalta <= dataFim;
             });
+            const faltasPeriodoValidas = faltasPeriodo.filter(f => isFaltaMotivo(f.motivo));
             
             const faltasMes = faltas.filter(f => {
                 const dataFalta = new Date(f.data + 'T12:00:00');
-                return dataFalta.getMonth() === agora.getMonth() && 
+                return isFaltaMotivo(f.motivo) &&
+                       dataFalta.getMonth() === agora.getMonth() && 
                        dataFalta.getFullYear() === agora.getFullYear();
             }).length;
             
             const totalAtestados = faltasPeriodo.filter(f => f.motivo === 'atestado-medico').length;
-            const faltasInjustificadas = faltasPeriodo.filter(f => f.motivo === 'falta-injustificada').length;
+            const faltasInjustificadas = faltasPeriodoValidas.filter(f => f.motivo === 'falta-injustificada').length;
             
             const diasUteis = 22 * totalFuncionarios;
             const taxaPresenca = diasUteis > 0 ? 
                 Math.round(((diasUteis - faltasMes) / diasUteis) * 100) : 100;
             
             const mediaFaltas = totalFuncionarios > 0 ? 
-                (faltasPeriodo.length / totalFuncionarios).toFixed(1) : 0;
+                (faltasPeriodoValidas.length / totalFuncionarios).toFixed(1) : 0;
             
-            const funcionariosComFaltas = new Set(faltasPeriodo.map(f => f.matricula));
+            const funcionariosComFaltas = new Set(faltasPeriodoValidas.map(f => f.matricula));
             const funcionariosSemFaltas = totalFuncionarios - funcionariosComFaltas.size;
             
             const motivos = {};
-            faltasPeriodo.forEach(falta => {
+            faltasPeriodoValidas.forEach(falta => {
                 motivos[falta.motivo] = (motivos[falta.motivo] || 0) + 1;
             });
             
@@ -3235,7 +3299,8 @@
                 
                 const faltasMes = faltas.filter(f => {
                     const dataFalta = new Date(f.data + 'T12:00:00');
-                    return dataFalta.getMonth() === data.getMonth() && 
+                    return isFaltaMotivo(f.motivo) &&
+                           dataFalta.getMonth() === data.getMonth() && 
                            dataFalta.getFullYear() === data.getFullYear();
                 }).length;
                 
@@ -3243,7 +3308,7 @@
             }
             
             const setores = {};
-            faltasPeriodo.forEach(falta => {
+            faltasPeriodoValidas.forEach(falta => {
                 const funcionario = funcionarios.find(f => f.cadastro.toString() === falta.matricula);
                 if (funcionario) {
                     const setor = funcionario.descricaoLocal || 'Não informado';
@@ -3261,7 +3326,7 @@
             };
             
             const turnos = {};
-            faltasPeriodo.forEach(falta => {
+            faltasPeriodoValidas.forEach(falta => {
                 const funcionario = funcionarios.find(f => f.cadastro.toString() === falta.matricula);
                 if (funcionario) {
                     const turno = funcionario.turno || 'Não informado';
@@ -3279,7 +3344,7 @@
             };
             
             const faltasPorFuncionario = {};
-            faltasPeriodo.forEach(falta => {
+            faltasPeriodoValidas.forEach(falta => {
                 if (!faltasPorFuncionario[falta.matricula]) {
                     faltasPorFuncionario[falta.matricula] = {
                         total: 0,
@@ -3546,6 +3611,20 @@
                 option.textContent = frente;
                 select.appendChild(option);
             });
+
+            const selectLider = document.getElementById('filtro-lider-relatorio');
+            if (selectLider) {
+                const lideres = [...new Set(funcionarios.map(f => (f.lider || '').trim()).filter(l => l))].sort();
+                const current = selectLider.value;
+                selectLider.innerHTML = '<option value="todos">Todos os Líderes</option>';
+                lideres.forEach(l => {
+                    const option = document.createElement('option');
+                    option.value = l;
+                    option.textContent = l;
+                    selectLider.appendChild(option);
+                });
+                if (lideres.includes(current)) selectLider.value = current;
+            }
         }
 
         function gerarRelatorio() {
@@ -3553,6 +3632,7 @@
             const dataInicialStr = document.getElementById('relatorio-data-inicial').value;
             const dataFinalStr = document.getElementById('relatorio-data-final').value;
             const frenteSelecionada = document.getElementById('filtro-frente-relatorio').value;
+            const liderSelecionado = document.getElementById('filtro-lider-relatorio').value;
             
             if (!dataInicialStr || !dataFinalStr) {
                 showMessage('Selecione o período para gerar o relatório!', 'error');
@@ -3574,6 +3654,14 @@
                 faltasNoPeriodo = faltasNoPeriodo.filter(f => {
                     const funcionario = funcionarios.find(func => func.cadastro.toString() === f.matricula);
                     return funcionario && funcionario.frente === frenteSelecionada;
+                });
+            }
+
+            // Aplicar filtro por líder se selecionado
+            if (liderSelecionado !== 'todos') {
+                faltasNoPeriodo = faltasNoPeriodo.filter(f => {
+                    const funcionario = funcionarios.find(func => func.cadastro.toString() === f.matricula);
+                    return funcionario && (funcionario.lider || '').trim() === liderSelecionado;
                 });
             }
 
