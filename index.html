@@ -666,6 +666,7 @@
                             <option value="faltas_setor">Faltas por Setor</option>
                             <option value="faltas_frente">Faltas por Frente</option>
                             <option value="atestados">Atestados Médicos</option>
+                            <option value="ferias">Férias</option>
                             <option value="comparativo">Comparativo Mensal</option>
                         </select>
                     </div>
@@ -3907,6 +3908,68 @@
                         </div>
                     `;
                     break;
+                case 'ferias':
+                    const feriasRegistros = faltasNoPeriodo.filter(f => f.motivo === 'ferias');
+                    const listaFerias = [];
+                    const porFuncionario = {};
+                    feriasRegistros.forEach(f => {
+                        if (!porFuncionario[f.matricula]) porFuncionario[f.matricula] = [];
+                        porFuncionario[f.matricula].push(f.data);
+                    });
+                    Object.entries(porFuncionario).forEach(([matricula, datas]) => {
+                        datas.sort((a,b) => a.localeCompare(b));
+                        let inicio = null;
+                        let anterior = null;
+                        let dias = 0;
+                        const funcionario = funcionarios.find(func => func.cadastro.toString() === matricula);
+                        const nome = funcionario ? funcionario.nome : (feriasRegistros.find(r => r.matricula === matricula)?.nomeFuncionario || '-');
+                        const cargo = funcionario ? funcionario.cargo : '-';
+                        datas.forEach(d => {
+                            if (!inicio) { inicio = d; anterior = d; dias = 1; return; }
+                            const prev = new Date(anterior + 'T12:00:00');
+                            const cur = new Date(d + 'T12:00:00');
+                            const diff = (cur - prev) / (1000*60*60*24);
+                            if (diff === 1) {
+                                anterior = d;
+                                dias++;
+                            } else {
+                                listaFerias.push({ nome, cargo, matricula, inicio, fim: anterior, dias });
+                                inicio = d; anterior = d; dias = 1;
+                            }
+                        });
+                        if (inicio) {
+                            listaFerias.push({ nome, cargo, matricula, inicio, fim: anterior, dias });
+                        }
+                    });
+                    listaFerias.sort((a, b) => a.inicio.localeCompare(b.inicio));
+                    conteudoHtml = `
+                        <h4 class="text-md font-semibold mt-4 mb-2">Férias no Período:</h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full table-auto text-sm">
+                                <thead>
+                                    <tr class="bg-gray-100 dark:bg-gray-600">
+                                        <th class="px-3 py-2 text-left">Funcionário</th>
+                                        <th class="px-3 py-2 text-left">Função</th>
+                                        <th class="px-3 py-2 text-left">Dias</th>
+                                        <th class="px-3 py-2 text-left">Data Inicial</th>
+                                        <th class="px-3 py-2 text-left">Data Final</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${listaFerias.map(item => `
+                                        <tr class="border-b border-gray-200 dark:border-gray-700">
+                                            <td class="px-3 py-2">${item.nome}</td>
+                                            <td class="px-3 py-2">${item.cargo}</td>
+                                            <td class="px-3 py-2">${item.dias}</td>
+                                            <td class="px-3 py-2">${formatarDataParaExibicao(item.inicio)}</td>
+                                            <td class="px-3 py-2">${formatarDataParaExibicao(item.fim)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    break;
                 case 'comparativo':
                     const comparativoMensal = {};
                     const meses = [];
@@ -3977,6 +4040,7 @@
                 'faltas_setor': 'Faltas por Setor',
                 'faltas_frente': 'Faltas por Frente',
                 'atestados': 'Atestados Médicos',
+                'ferias': 'Férias',
                 'comparativo': 'Comparativo Mensal'
             };
             return tipos[tipo] || tipo;
