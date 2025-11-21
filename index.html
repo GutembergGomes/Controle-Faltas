@@ -143,7 +143,15 @@
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
                 <div class="flex flex-col md:flex-row justify-between items-center mb-6">
                     <h2 class="text-xl font-bold text-gray-900 dark:text-white">Dashboard - Visão Geral</h2>
-                    <div class="flex gap-4 mt-4 md:mt-0">
+                    <div class="flex gap-4 mt-4 md:mt-0 items-center">
+                        <select id="filtro-frente-dashboard" 
+                                class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#5D5CDE] dark:bg-gray-700 dark:text-white text-base">
+                            <option value="todas">Todas as Frentes</option>
+                        </select>
+                        <select id="filtro-lider-dashboard" 
+                                class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#5D5CDE] dark:bg-gray-700 dark:text-white text-base">
+                            <option value="todos">Todos os Líderes</option>
+                        </select>
                         <select id="filtro-periodo-dashboard" 
                                 class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#5D5CDE] dark:bg-gray-700 dark:text-white text-base">
                             <option value="mes_atual">Este Mês</option>
@@ -235,6 +243,39 @@
                     </div>
                 </div>
 
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="stat-card bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-indigo-600 dark:text-indigo-400 text-sm font-medium">Faltas de Hoje</div>
+                                <div class="text-2xl font-bold text-indigo-900 dark:text-indigo-300" id="dashboard-faltas-hoje">0</div>
+                            </div>
+                            <i class="fas fa-calendar-day text-indigo-500 text-xl"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-lg p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-teal-600 dark:text-teal-400 text-sm font-medium">Registros Administrativos</div>
+                                <div class="text-xs text-teal-700 dark:text-teal-300">Férias, Banco de Horas, Abono, Dispensa por Chuva</div>
+                                <div class="text-2xl font-bold text-teal-900 dark:text-teal-300" id="dashboard-admin-registros">0</div>
+                            </div>
+                            <i class="fas fa-clipboard-list text-teal-500 text-xl"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-800 rounded-lg p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-gray-600 dark:text-gray-400 text-sm font-medium">Variação vs Mês Anterior</div>
+                                <div class="text-2xl font-bold" id="dashboard-variacao-mes">0</div>
+                            </div>
+                            <i class="fas fa-exchange-alt text-gray-500 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Gráficos -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
@@ -287,6 +328,45 @@
                                 <!-- Dados serão inseridos via JavaScript -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Líderes por Faltas</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full table-auto text-sm">
+                                <thead>
+                                    <tr class="bg-gray-100 dark:bg-gray-700">
+                                        <th class="px-4 py-2 text-left">Líder</th>
+                                        <th class="px-4 py-2 text-left">Total de Faltas</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="top-lideres-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Resumo Administrativo</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                                <div class="text-sm text-purple-700 dark:text-purple-300">Férias</div>
+                                <div class="text-xl font-bold" id="dashboard-ferias-count">0</div>
+                            </div>
+                            <div class="p-4 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg">
+                                <div class="text-sm text-cyan-700 dark:text-cyan-300">Banco de Horas</div>
+                                <div class="text-xl font-bold" id="dashboard-banco-count">0</div>
+                            </div>
+                            <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                                <div class="text-sm text-yellow-700 dark:text-yellow-300">Abonos</div>
+                                <div class="text-xl font-bold" id="dashboard-abono-count">0</div>
+                            </div>
+                            <div class="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+                                <div class="text-sm text-indigo-700 dark:text-indigo-300">Dispensa por Chuva</div>
+                                <div class="text-xl font-bold" id="dashboard-chuva-count">0</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -726,6 +806,10 @@
                             <button onclick="exportarRelatorioExcel()" 
                                     class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-200">
                                 <i class="fas fa-file-excel mr-2"></i>Exportar Excel
+                            </button>
+                            <button onclick="exportarRelatorioCSV()" 
+                                    class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition duration-200">
+                                <i class="fas fa-file-csv mr-2"></i>Exportar CSV
                             </button>
                         </div>
                     </div>
@@ -1755,11 +1839,13 @@
                     funcionariosLoadedFromDB = true;
                     carregarFuncionarios();
                     showMessage('Funcionários atualizados do banco', 'success');
+                    atualizarDashboard();
                 }
             } catch (error) {
                 console.error('Erro ao carregar funcionários:', error);
                 showMessage('Usando base local de funcionários (offline)', 'info');
                 await carregarFuncionariosLocais();
+                atualizarDashboard();
             }
         }
 
@@ -1833,11 +1919,13 @@
                     
                     localStorage.setItem('historico', JSON.stringify(historico));
                     historicoLoadedFromDB = true;
+                    atualizarDashboard();
                 }
             } catch (error) {
                 console.error('Erro ao carregar histórico:', error);
                 showMessage('Usando dados locais de histórico (offline)', 'info');
                 historico = JSON.parse(localStorage.getItem('historico') || '[]');
+                atualizarDashboard();
             }
         }
 
@@ -3199,11 +3287,45 @@
 
         function inicializarDashboard() {
             atualizarDashboard();
+            carregarOpcoesDashboardFiltros();
+            document.getElementById('filtro-frente-dashboard')?.addEventListener('change', atualizarDashboard);
+            document.getElementById('filtro-lider-dashboard')?.addEventListener('change', atualizarDashboard);
+        }
+
+        function carregarOpcoesDashboardFiltros() {
+            const frenteSelect = document.getElementById('filtro-frente-dashboard');
+            const liderSelect = document.getElementById('filtro-lider-dashboard');
+            if (frenteSelect) {
+                const frentes = [...new Set(funcionarios.map(f => f.frente).filter(f => f && f.trim() !== ''))].sort();
+                const current = frenteSelect.value;
+                frenteSelect.innerHTML = '<option value="todas">Todas as Frentes</option>';
+                frentes.forEach(frente => {
+                    const option = document.createElement('option');
+                    option.value = frente;
+                    option.textContent = frente;
+                    frenteSelect.appendChild(option);
+                });
+                if (frentes.includes(current)) frenteSelect.value = current;
+            }
+            if (liderSelect) {
+                const lideres = [...new Set(funcionarios.map(f => (f.lider || '').trim()).filter(l => l))].sort();
+                const current = liderSelect.value;
+                liderSelect.innerHTML = '<option value="todos">Todos os Líderes</option>';
+                lideres.forEach(l => {
+                    const option = document.createElement('option');
+                    option.value = l;
+                    option.textContent = l;
+                    liderSelect.appendChild(option);
+                });
+                if (lideres.includes(current)) liderSelect.value = current;
+            }
         }
 
         function atualizarDashboard() {
             const periodo = document.getElementById('filtro-periodo-dashboard').value;
-            const dados = calcularEstatisticasDashboard(periodo);
+            const frente = document.getElementById('filtro-frente-dashboard')?.value || 'todas';
+            const lider = document.getElementById('filtro-lider-dashboard')?.value || 'todos';
+            const dados = calcularEstatisticasDashboard(periodo, frente, lider);
             
             // Atualiza números sempre
             document.getElementById('dashboard-total-funcionarios').textContent = dados.totalFuncionarios;
@@ -3213,6 +3335,13 @@
             document.getElementById('dashboard-faltas-injustificadas').textContent = dados.faltasInjustificadas;
             document.getElementById('dashboard-media-faltas').textContent = dados.mediaFaltas;
             document.getElementById('dashboard-sem-faltas').textContent = dados.funcionariosSemFaltas;
+            document.getElementById('dashboard-faltas-hoje').textContent = dados.faltasHoje;
+            document.getElementById('dashboard-admin-registros').textContent = dados.adminRegistrosPeriodo;
+            document.getElementById('dashboard-variacao-mes').textContent = dados.variacaoMes;
+            document.getElementById('dashboard-ferias-count').textContent = dados.resumoAdmin.ferias;
+            document.getElementById('dashboard-banco-count').textContent = dados.resumoAdmin.bancoHoras;
+            document.getElementById('dashboard-abono-count').textContent = dados.resumoAdmin.abono;
+            document.getElementById('dashboard-chuva-count').textContent = dados.resumoAdmin.chuva;
             
             // Atualiza gráficos somente se Chart.js estiver presente (UMD seguro)
             const ChartLib = getChartLib();
@@ -3227,9 +3356,10 @@
             }
 
             atualizarTopFaltas(dados.topFaltas);
+            atualizarTopLideres(dados.topLideres);
         }
 
-        function calcularEstatisticasDashboard(periodo) {
+        function calcularEstatisticasDashboard(periodo, frenteSelecionada, liderSelecionado) {
             const agora = new Date();
             let dataInicio, dataFim;
             
@@ -3256,17 +3386,39 @@
             }
             
             const totalFuncionarios = funcionarios.length;
-            const faltasPeriodo = faltas.filter(f => {
+            let faltasPeriodo = faltas.filter(f => {
                 const dataFalta = new Date(f.data + 'T12:00:00');
                 return dataFalta >= dataInicio && dataFalta <= dataFim;
             });
+            if (frenteSelecionada !== 'todas') {
+                faltasPeriodo = faltasPeriodo.filter(f => {
+                    const func = funcionarios.find(x => x.cadastro.toString() === f.matricula);
+                    return func && func.frente === frenteSelecionada;
+                });
+            }
+            if (liderSelecionado !== 'todos') {
+                faltasPeriodo = faltasPeriodo.filter(f => {
+                    const func = funcionarios.find(x => x.cadastro.toString() === f.matricula);
+                    return func && (func.lider || '').trim() === liderSelecionado;
+                });
+            }
             const faltasPeriodoValidas = faltasPeriodo.filter(f => isFaltaMotivo(f.motivo));
             
             const faltasMes = faltas.filter(f => {
                 const dataFalta = new Date(f.data + 'T12:00:00');
-                return isFaltaMotivo(f.motivo) &&
+                let ok = isFaltaMotivo(f.motivo) &&
                        dataFalta.getMonth() === agora.getMonth() && 
                        dataFalta.getFullYear() === agora.getFullYear();
+                if (!ok) return false;
+                if (frenteSelecionada !== 'todas') {
+                    const func = funcionarios.find(x => x.cadastro.toString() === f.matricula);
+                    if (!(func && func.frente === frenteSelecionada)) return false;
+                }
+                if (liderSelecionado !== 'todos') {
+                    const func = funcionarios.find(x => x.cadastro.toString() === f.matricula);
+                    if (!(func && (func.lider || '').trim() === liderSelecionado)) return false;
+                }
+                return true;
             }).length;
             
             const totalAtestados = faltasPeriodo.filter(f => f.motivo === 'atestado-medico').length;
@@ -3384,6 +3536,59 @@
                 .filter(item => item.funcionario)
                 .sort((a, b) => b.total - a.total)
                 .slice(0, 10);
+
+            const hojeStr = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`;
+            const faltasHoje = faltas.filter(f => {
+                if (!isFaltaMotivo(f.motivo)) return false;
+                if (f.data !== hojeStr) return false;
+                const func = funcionarios.find(x => x.cadastro.toString() === f.matricula);
+                if (frenteSelecionada !== 'todas' && !(func && func.frente === frenteSelecionada)) return false;
+                if (liderSelecionado !== 'todos' && !(func && (func.lider || '').trim() === liderSelecionado)) return false;
+                return true;
+            }).length;
+
+            const adminMotivos = new Set(['ferias', 'banco-horas', 'abono', 'dispensa-chuva']);
+            const adminPeriodo = faltas.filter(f => {
+                const d = new Date(f.data + 'T12:00:00');
+                if (!(d >= dataInicio && d <= dataFim)) return false;
+                if (!adminMotivos.has(f.motivo)) return false;
+                const func = funcionarios.find(x => x.cadastro.toString() === f.matricula);
+                if (frenteSelecionada !== 'todas' && !(func && func.frente === frenteSelecionada)) return false;
+                if (liderSelecionado !== 'todos' && !(func && (func.lider || '').trim() === liderSelecionado)) return false;
+                return true;
+            });
+            const resumoAdmin = {
+                ferias: adminPeriodo.filter(f => f.motivo === 'ferias').length,
+                bancoHoras: adminPeriodo.filter(f => f.motivo === 'banco-horas').length,
+                abono: adminPeriodo.filter(f => f.motivo === 'abono').length,
+                chuva: adminPeriodo.filter(f => f.motivo === 'dispensa-chuva').length
+            };
+            const adminRegistrosPeriodo = adminPeriodo.length;
+
+            const porLider = {};
+            faltasPeriodoValidas.forEach(f => {
+                const func = funcionarios.find(x => x.cadastro.toString() === f.matricula);
+                const lider = func ? ((func.lider || '').trim() || 'Sem líder') : 'Sem líder';
+                porLider[lider] = (porLider[lider] || 0) + 1;
+            });
+            const topLideres = Object.entries(porLider)
+                .map(([lider, total]) => ({ lider, total }))
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 10);
+
+            const prevInicio = new Date(agora.getFullYear(), agora.getMonth() - 1, 1);
+            const prevFim = new Date(agora.getFullYear(), agora.getMonth(), 0);
+            const faltasPrev = faltas.filter(f => {
+                const d = new Date(f.data + 'T12:00:00');
+                if (!isFaltaMotivo(f.motivo)) return false;
+                if (!(d >= prevInicio && d <= prevFim)) return false;
+                const func = funcionarios.find(x => x.cadastro.toString() === f.matricula);
+                if (frenteSelecionada !== 'todas' && !(func && func.frente === frenteSelecionada)) return false;
+                if (liderSelecionado !== 'todos' && !(func && (func.lider || '').trim() === liderSelecionado)) return false;
+                return true;
+            }).length;
+            const variacaoMesPct = faltasPrev === 0 ? (faltasMes > 0 ? 100 : 0) : Math.round(((faltasMes - faltasPrev) / faltasPrev) * 100);
+            const variacaoMes = (variacaoMesPct >= 0 ? '+' : '') + variacaoMesPct + '%';
             
             return {
                 totalFuncionarios,
@@ -3397,8 +3602,24 @@
                 graficoEvolucao,
                 graficoSetores,
                 graficoTurnos,
-                topFaltas
+                topFaltas,
+                faltasHoje,
+                adminRegistrosPeriodo,
+                resumoAdmin,
+                topLideres,
+                variacaoMes
             };
+        }
+
+        function atualizarTopLideres(lista) {
+            const tbody = document.getElementById('top-lideres-table');
+            if (!tbody) return;
+            tbody.innerHTML = lista.map(item => `
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <td class="px-4 py-2">${item.lider}</td>
+                    <td class="px-4 py-2">${item.total}</td>
+                </tr>
+            `).join('');
         }
 
         function atualizarGraficoMotivos(dados) {
@@ -4135,36 +4356,51 @@
                 `;
             } else if (tipo === 'banco_horas_mes') {
                 const registros = faltasNoPeriodo.filter(f => f.motivo === 'banco-horas');
+                const porFuncionario = {};
+                registros.forEach(f => {
+                    const key = f.matricula;
+                    const func = funcionarios.find(func => func.cadastro.toString() === f.matricula);
+                    if (!porFuncionario[key]) {
+                        porFuncionario[key] = {
+                            nome: f.nomeFuncionario,
+                            matricula: f.matricula,
+                            frente: func ? func.frente : '-',
+                            datas: []
+                        };
+                    }
+                    porFuncionario[key].datas.push(f.data);
+                });
+                const linhas = Object.values(porFuncionario)
+                    .map(item => ({
+                        ...item,
+                        diasTotal: item.datas.length,
+                        datasFormatadas: item.datas.sort((a,b)=>a.localeCompare(b)).map(d => formatarDataParaExibicao(d)).join(', ')
+                    }))
+                    .sort((a,b) => b.diasTotal - a.diasTotal);
                 conteudoHtml = `
                     <p>Total de Registros de Banco de Horas: <strong>${registros.length}</strong></p>
-                    <h4 class="text-md font-semibold mt-4 mb-2">Detalhes:</h4>
+                    <h4 class="text-md font-semibold mt-4 mb-2">Resumo por Funcionário:</h4>
                     <div class="overflow-x-auto">
                         <table class="w-full table-auto text-sm">
                             <thead>
                                 <tr class="bg-gray-100 dark:bg-gray-600">
-                                    <th class="px-3 py-2 text-left">Data</th>
                                     <th class="px-3 py-2 text-left">Funcionário</th>
                                     <th class="px-3 py-2 text-left">Matrícula</th>
                                     <th class="px-3 py-2 text-left">Frente</th>
-                                    <th class="px-3 py-2 text-left">Motivo</th>
-                                    <th class="px-3 py-2 text-left">Observações</th>
+                                    <th class="px-3 py-2 text-left">Dias de Banco</th>
+                                    <th class="px-3 py-2 text-left">Dias Utilizados</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${registros.map(f => {
-                                    const funcionario = funcionarios.find(func => func.cadastro.toString() === f.matricula);
-                                    const frente = funcionario ? funcionario.frente : '-';
-                                    return `
-                                        <tr class="border-b border-gray-200 dark:border-gray-700">
-                                            <td class="px-3 py-2">${formatarDataParaExibicao(f.data)}</td>
-                                            <td class="px-3 py-2">${f.nomeFuncionario}</td>
-                                            <td class="px-3 py-2">${f.matricula}</td>
-                                            <td class="px-3 py-2">${frente}</td>
-                                            <td class="px-3 py-2">${getMotivoLabel(f.motivo)}</td>
-                                            <td class="px-3 py-2">${f.observacoes || '-'}</td>
-                                        </tr>
-                                    `;
-                                }).join('')}
+                                ${linhas.map(item => `
+                                    <tr class="border-b border-gray-200 dark:border-gray-700">
+                                        <td class="px-3 py-2">${item.nome}</td>
+                                        <td class="px-3 py-2">${item.matricula}</td>
+                                        <td class="px-3 py-2">${item.frente}</td>
+                                        <td class="px-3 py-2">${item.diasTotal}</td>
+                                        <td class="px-3 py-2">${item.datasFormatadas}</td>
+                                    </tr>
+                                `).join('')}
                             </tbody>
                         </table>
                     </div>
@@ -4229,6 +4465,47 @@
 
         function exportarRelatorioExcel() {
             showMessage('Funcionalidade de exportação Excel em desenvolvimento!', 'info');
+        }
+
+        function exportarRelatorioCSV() {
+            const area = document.getElementById('conteudo-relatorio');
+            const table = area.querySelector('table');
+            if (!table) { showMessage('Nenhuma tabela encontrada no relatório.', 'error'); return; }
+            const rows = Array.from(table.querySelectorAll('tr'));
+            const csv = rows.map(row => Array.from(row.querySelectorAll('th,td')).map(cell => {
+                const text = (cell.textContent || '').replace(/\n/g, ' ').trim();
+                const escaped = '"' + text.replace(/"/g, '""') + '"';
+                return escaped;
+            }).join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'relatorio.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function setLoading(on) {
+            let bar = document.getElementById('global-loading');
+            if (!bar) {
+                bar = document.createElement('div');
+                bar.id = 'global-loading';
+                bar.style.position = 'fixed';
+                bar.style.top = '0';
+                bar.style.left = '0';
+                bar.style.width = '100%';
+                bar.style.height = '4px';
+                bar.style.background = 'linear-gradient(90deg, #5D5CDE, #4A4BC9)';
+                bar.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+                bar.style.transform = 'scaleX(0)';
+                bar.style.transformOrigin = '0 0';
+                bar.style.transition = 'transform 0.3s ease';
+                document.body.appendChild(bar);
+            }
+            bar.style.transform = on ? 'scaleX(1)' : 'scaleX(0)';
         }
 
         // ===== FUNÇÕES DE SALVAMENTO EM LOTE =====
