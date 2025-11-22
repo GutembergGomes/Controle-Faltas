@@ -747,6 +747,7 @@
                             <option value="faltas_frente">Faltas por Frente</option>
                             <option value="atestados">Atestados Médicos</option>
                             <option value="ferias">Férias</option>
+                            <option value="banco_horas">Banco de Horas</option>
                             <option value="comparativo">Comparativo Mensal</option>
                         </select>
                     </div>
@@ -1668,52 +1669,44 @@
         // ===== INICIALIZAÇÃO DO SUPABASE =====
         async function initSupabase() {
             try {
-                const { data: { session: currentSession }, error: sessionError } = await sb.auth.getSession();
-                
-                if (sessionError) {
-                    console.error('Erro ao verificar sessão:', sessionError);
-                    if (!notificouFalhaConexao) {
-                        showMessage('Conexão com o banco indisponível. Operando em modo offline.', 'info');
-                        notificouFalhaConexao = true;
-                    }
+                if (!sb) {
+                    if (!notificouFalhaConexao) { showMessage('Conexão com o banco indisponível. Operando em modo offline.', 'info'); notificouFalhaConexao = true; }
                     await carregarFuncionariosLocais();
                     faltas = JSON.parse(localStorage.getItem('faltas') || '[]');
                     historico = JSON.parse(localStorage.getItem('historico') || '[]');
                     return;
                 }
 
+                const { data: { session: currentSession }, error: sessionError } = await sb.auth.getSession();
+                if (sessionError) {
+                    console.error('Erro ao verificar sessão:', sessionError);
+                    if (!notificouFalhaConexao) { showMessage('Sessão não autenticada. Exibindo dados se política permitir.', 'info'); notificouFalhaConexao = true; }
+                }
+
                 session = currentSession;
                 updateAuthUI();
 
                 await carregarFuncionariosDB();
-                
-                setTimeout(() => {
-                    Promise.allSettled([
-                        carregarFaltasDB(),
-                        carregarHistoricoDB()
-                    ]);
-                }, 0);
+                await Promise.allSettled([
+                    carregarFaltasDB(),
+                    carregarHistoricoDB()
+                ]);
 
                 sb.auth.onAuthStateChange(async (event, newSession) => {
                     session = newSession;
                     updateAuthUI();
-
                     await carregarFuncionariosDB();
-                    Promise.allSettled([
+                    await Promise.allSettled([
                         carregarFaltasDB(),
                         carregarHistoricoDB()
                     ]);
-                    
                     const currentTab = document.querySelector('.tab-button.active')?.id.replace('tab-', '');
                     if (currentTab) showTab(currentTab);
                 });
 
             } catch (error) {
                 console.error('Erro na inicialização do Supabase:', error);
-                if (!notificouFalhaConexao) {
-                    showMessage('Conexão com o banco indisponível. Operando em modo offline.', 'info');
-                    notificouFalhaConexao = true;
-                }
+                if (!notificouFalhaConexao) { showMessage('Conexão com o banco indisponível. Operando em modo offline.', 'info'); notificouFalhaConexao = true; }
                 await carregarFuncionariosLocais();
                 faltas = JSON.parse(localStorage.getItem('faltas') || '[]');
                 historico = JSON.parse(localStorage.getItem('historico') || '[]');
@@ -2181,6 +2174,9 @@
                     const label = getPeriodoLabel(this.value);
                     document.getElementById('label-data-inicial-periodo').textContent = `Data Inicial de ${label}`;
                     document.getElementById('label-duracao-periodo').textContent = `Duração de ${label} (dias)`;
+                    if (this.value === 'ferias') {
+                        document.getElementById('duracao-atestado').value = '30';
+                    }
                     calcularDatasAtestado();
                 } else {
                     atestadoFields.style.display = 'none';
@@ -2690,11 +2686,7 @@
             const faltaId = document.getElementById('falta-id').value;
             
             const funcionario = funcionarios.find(f => f.cadastro.toString() === matricula);
-            
-            if (!funcionario) {
-                showMessage('Funcionário não encontrado!', 'error');
-                return;
-            }
+            const nomeFunc = funcionario ? funcionario.nome : (document.getElementById('nome-funcionario').value || '-');
 
             if (isPeriodoMotivo(motivo)) {
                 const dataInicialAtestado = document.getElementById('data-inicial-atestado').value;
@@ -2705,47 +2697,61 @@
                     return;
                 }
 
-                const datasAtestado = gerarDatasPeriodo(dataInicialAtestado, duracaoAtestado);
-
-                const faltasExistentes = faltas.filter(f => f.matricula === matricula && datasAtestado.includes(f.data));
-                if (faltasExistentes.length > 0) {
-                    showMessage(`Já existem registros para ${faltasExistentes.length} dia(s) deste período!`, 'error');
-                    return;
-                }
-
-                // Cria todas as faltas do atestado para salvar de uma vez (em lote)
-                const novasFaltas = datasAtestado.map(dataAtestado => ({
-                    matricula,
-                    nomeFuncionario: funcionario.nome,
-                    data: dataAtestado,
-                    motivo,
-                    observacoes: observacoes + ` (${getPeriodoLabel(motivo)}: ${formatarDataParaExibicao(dataInicialAtestado)} a ${formatarDataParaExibicao(datasAtestado[datasAtestado.length - 1])})`,
-                    registradoEm: new Date().toISOString(),
-                    diasAtestado: duracaoAtestado
-                }));
-
-                if (!session) { novasFaltas.forEach(f => { f.id = gerarIdLocal(); }); }
-                const sucessoDB = session ? await salvarFaltasDBLote(novasFaltas) : true;
-
-                if (sucessoDB) {
-                    // Atualiza localmente em bloco (menos re-renderizações)
-                    faltas.push(...novasFaltas);
-                    localStorage.setItem('faltas', JSON.stringify(faltas));
-                    adicionarRegistroHistorico(
-                        'falta', 
-                        `${getPeriodoLabel(motivo)} registrado: ${funcionario.nome} (${duracaoAtestado} dias)`,
-                        `Período: ${formatarDataParaExibicao(dataInicialAtestado)} a ${formatarDataParaExibicao(datasAtestado[datasAtestado.length-1])}`
-                    );
-                    showMessage(`${getPeriodoLabel(motivo)} registrado com sucesso! ${novasFaltas.length} registro(s) criado(s).`, 'success');
-                    cancelarEdicao();
+                const motivoNorm = normalizarMotivo(motivo);
+                if (motivoNorm === 'ferias') {
+                    if (!duracaoAtestado || duracaoAtestado <= 0) { duracaoAtestado = 30; }
+                    const datasAtestado = gerarDatasPeriodo(dataInicialAtestado, duracaoAtestado);
+                    const fimPeriodo = datasAtestado[duracaoAtestado - 1];
+                    const jaExiste = faltas.find(f => normalizarMotivo(f.motivo) === 'ferias' && f.matricula === matricula && f.data === dataInicialAtestado);
+                    if (jaExiste) { showMessage('Já existe férias registrada com esta data inicial!', 'error'); return; }
+                    const faltaUnica = {
+                        matricula,
+                        nomeFuncionario: nomeFunc,
+                        data: dataInicialAtestado,
+                        motivo,
+                        observacoes: observacoes + ` (${getPeriodoLabel(motivo)}: ${formatarDataParaExibicao(dataInicialAtestado)} a ${formatarDataParaExibicao(fimPeriodo)})`,
+                        registradoEm: new Date().toISOString(),
+                        diasAtestado: duracaoAtestado
+                    };
+                    if (!session) { faltaUnica.id = gerarIdLocal(); }
+                    const sucessoDBFerias = session ? await salvarFaltaDB(faltaUnica) : true;
+                    if (sucessoDBFerias) {
+                        faltas.push(faltaUnica);
+                        if (Array.isArray(window.faltas)) { window.faltas.push(faltaUnica); } else { window.faltas = JSON.parse(localStorage.getItem('faltas') || '[]'); }
+                        localStorage.setItem('faltas', JSON.stringify(faltas));
+                        adicionarRegistroHistorico('falta', `${getPeriodoLabel(motivo)} registrado: ${nomeFunc} (${duracaoAtestado} dias)`, `Período: ${formatarDataParaExibicao(dataInicialAtestado)} a ${formatarDataParaExibicao(fimPeriodo)}`);
+                        showMessage('Férias registrada com sucesso!', 'success');
+                        cancelarEdicao();
+                    } else { showMessage('Não foi possível registrar as férias.', 'error'); }
                 } else {
-                    showMessage('Não foi possível registrar o atestado.', 'error');
+                    const datasAtestado = gerarDatasPeriodo(dataInicialAtestado, duracaoAtestado);
+                    const faltasExistentes = faltas.filter(f => f.matricula === matricula && datasAtestado.includes(f.data));
+                    if (faltasExistentes.length > 0) { showMessage(`Já existem registros para ${faltasExistentes.length} dia(s) deste período!`, 'error'); return; }
+                    const novasFaltas = datasAtestado.map(dataAtestado => ({
+                        matricula,
+                        nomeFuncionario: nomeFunc,
+                        data: dataAtestado,
+                        motivo,
+                        observacoes: observacoes + ` (${getPeriodoLabel(motivo)}: ${formatarDataParaExibicao(dataInicialAtestado)} a ${formatarDataParaExibicao(datasAtestado[datasAtestado.length - 1])})`,
+                        registradoEm: new Date().toISOString(),
+                        diasAtestado: duracaoAtestado
+                    }));
+                    if (!session) { novasFaltas.forEach(f => { f.id = gerarIdLocal(); }); }
+                    const sucessoDB = session ? await salvarFaltasDBLote(novasFaltas) : true;
+                    if (sucessoDB) {
+                        faltas.push(...novasFaltas);
+                        if (Array.isArray(window.faltas)) { window.faltas.push(...novasFaltas); } else { window.faltas = JSON.parse(localStorage.getItem('faltas') || '[]'); }
+                        localStorage.setItem('faltas', JSON.stringify(faltas));
+                        adicionarRegistroHistorico('falta', `${getPeriodoLabel(motivo)} registrado: ${nomeFunc} (${duracaoAtestado} dias)`, `Período: ${formatarDataParaExibicao(dataInicialAtestado)} a ${formatarDataParaExibicao(datasAtestado[datasAtestado.length-1])}`);
+                        showMessage(`${getPeriodoLabel(motivo)} registrado com sucesso! ${novasFaltas.length} registro(s) criado(s).`, 'success');
+                        cancelarEdicao();
+                    } else { showMessage('Não foi possível registrar o atestado.', 'error'); }
                 }
 
             } else {
                 const novaFalta = {
                     matricula,
-                    nomeFuncionario: funcionario.nome,
+                    nomeFuncionario: nomeFunc,
                     data,
                     motivo,
                     observacoes,
@@ -2779,11 +2785,11 @@
                             if (faltaOriginal.observacoes !== novaFalta.observacoes) alteracoes.push(`Observações alteradas`);
                             
                             if (alteracoes.length > 0) {
-                                adicionarRegistroHistorico(
-                                    'falta', 
-                                    `Falta atualizada: ${funcionario.nome} (${formatarDataParaExibicao(novaFalta.data)})`,
-                                    `Alterações: ${alteracoes.join(', ')}`
-                                );
+                            adicionarRegistroHistorico(
+                                'falta', 
+                                `Falta atualizada: ${nomeFunc} (${formatarDataParaExibicao(novaFalta.data)})`,
+                                `Alterações: ${alteracoes.join(', ')}`
+                            );
                             }
                             showMessage('Falta atualizada com sucesso!', 'success');
                         }
@@ -2791,7 +2797,7 @@
                         faltas.push(novaFalta);
                         adicionarRegistroHistorico(
                             'falta', 
-                            `Falta registrada: ${funcionario.nome} (${formatarDataParaExibicao(data)})`,
+                            `Falta registrada: ${nomeFunc} (${formatarDataParaExibicao(data)})`,
                             `Motivo: ${getMotivoLabel(motivo)}`
                         );
                         showMessage('Falta registrada com sucesso!', 'success');
@@ -4130,60 +4136,123 @@
                     `;
                     break;
                 case 'ferias':
-                    const feriasRegistros = faltasNoPeriodo.filter(f => f.motivo === 'ferias');
-                    const listaFerias = [];
-                    const porFuncionario = {};
-                    feriasRegistros.forEach(f => {
-                        if (!porFuncionario[f.matricula]) porFuncionario[f.matricula] = [];
-                        porFuncionario[f.matricula].push(f.data);
-                    });
-                    Object.entries(porFuncionario).forEach(([matricula, datas]) => {
-                        datas.sort((a,b) => a.localeCompare(b));
-                        let inicio = null;
-                        let anterior = null;
-                        let dias = 0;
-                        const funcionario = funcionarios.find(func => func.cadastro.toString() === matricula);
-                        const nome = funcionario ? funcionario.nome : (feriasRegistros.find(r => r.matricula === matricula)?.nomeFuncionario || '-');
+                    const containsFeriasObs = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes('ferias');
+                    const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+                    const toDate = d => new Date(d + 'T12:00:00');
+                    const diffDays = (a,b) => Math.round((a - b) / (1000*60*60*24));
+                    const brToISO = s => { const p = String(s).split('/'); return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`; };
+                    const addDaysISO = (baseISO, n) => { const base = toDate(baseISO); const dt = new Date(base); dt.setDate(base.getDate() + n); const y = dt.getFullYear(); const mo = String(dt.getMonth()+1).padStart(2,'0'); const da = String(dt.getDate()).padStart(2,'0'); return `${y}-${mo}-${da}`; };
+                    const clipDays = (inicioISO, fimISO, inicioP, fimP) => { const s = toDate(inicioISO); const e = toDate(fimISO); const start = s > inicioP ? s : inicioP; const end = e < fimP ? e : fimP; if (end < start) return 0; return diffDays(end, start) + 1; };
+                    const todasFerias = faltasNoPeriodo.filter(f => { const m = norm(f.motivo); return m === 'ferias' || m.includes('ferias') || containsFeriasObs(f.observacoes); });
+                    const linhasFerias = todasFerias.map(f => {
+                        const funcionario = funcionarios.find(func => func.cadastro.toString() === f.matricula);
+                        const nome = funcionario ? funcionario.nome : (f.nomeFuncionario || '-');
                         const cargo = funcionario ? funcionario.cargo : '-';
-                        datas.forEach(d => {
-                            if (!inicio) { inicio = d; anterior = d; dias = 1; return; }
-                            const prev = new Date(anterior + 'T12:00:00');
-                            const cur = new Date(d + 'T12:00:00');
-                            const diff = (cur - prev) / (1000*60*60*24);
-                            if (diff === 1) {
-                                anterior = d;
-                                dias++;
-                            } else {
-                                listaFerias.push({ nome, cargo, matricula, inicio, fim: anterior, dias });
-                                inicio = d; anterior = d; dias = 1;
-                            }
-                        });
-                        if (inicio) {
-                            listaFerias.push({ nome, cargo, matricula, inicio, fim: anterior, dias });
+                        let dur = parseInt(f.diasAtestado || f.dias_atestado);
+                        if (!dur || dur < 1) dur = 30;
+                        const mObs = (f.observacoes || '').match(/(\d{2}\/\d{2}\/\d{4})\s*a\s*(\d{2}\/\d{2}\/\d{4})/);
+                        const inicioISO = mObs ? brToISO(mObs[1]) : f.data;
+                        const fimISO = mObs ? brToISO(mObs[2]) : addDaysISO(f.data, dur - 1);
+                        const diasPeriodo = clipDays(inicioISO, fimISO, dataInicial, dataFinal);
+                        return { nome, cargo, matricula: f.matricula, diasPeriodo, diasTotal: dur, inicio: inicioISO, fim: fimISO };
+                    }).sort((a,b) => a.inicio.localeCompare(b.inicio));
+                    window.relatorioFeriasLinhas = linhasFerias;
+                    window.relatorioFeriasTitulo = tituloRelatorio;
+                    window.relatorioPaginacao = window.relatorioPaginacao || { page: 1, pageSize: 50 };
+                    {
+                        const total = linhasFerias.length;
+                        const totalRegistrosFerias = todasFerias.length;
+                        const totalFuncionariosFerias = Array.from(new Set(todasFerias.map(f => f.matricula))).length;
+                        const pageSize = window.relatorioPaginacao.pageSize;
+                        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+                        const page = Math.min(Math.max(window.relatorioPaginacao.page, 1), totalPages);
+                        const start = (page - 1) * pageSize;
+                        const end = Math.min(start + pageSize, total);
+                        const paginaLinhas = linhasFerias.slice(start, end);
+                        conteudoHtml = `
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-md font-semibold">Férias no Período</h4>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-sm">Página ${page} de ${totalPages}</span>
+                                    <span class="text-sm">Mostrando ${start + 1}–${end} de ${total}</span>
+                                    <span class="text-sm">Registros (BD): ${totalRegistrosFerias}</span>
+                                    <span class="text-sm">Funcionários com férias: ${totalFuncionariosFerias}</span>
+                                    <select class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded" onchange="window.setPageSizeRelatorio(parseInt(this.value))">
+                                        <option value="25"${pageSize===25?' selected':''}>25</option>
+                                        <option value="50"${pageSize===50?' selected':''}>50</option>
+                                        <option value="100"${pageSize===100?' selected':''}>100</option>
+                                    </select>
+                                    <div class="flex items-center gap-2">
+                                        <button class="px-3 py-1 border rounded" onclick="window.mudarPaginaRelatorio(-1)">Anterior</button>
+                                        <button class="px-3 py-1 border rounded" onclick="window.mudarPaginaRelatorio(1)">Próxima</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full table-auto text-sm">
+                                    <thead>
+                                        <tr class="bg-gray-100 dark:bg-gray-600">
+                                            <th class="px-3 py-2 text-left">Funcionário</th>
+                                            <th class="px-3 py-2 text-left">Função</th>
+                                            <th class="px-3 py-2 text-left">Dias (no período)</th>
+                                            <th class="px-3 py-2 text-left">Dias lançados</th>
+                                            <th class="px-3 py-2 text-left">Data Inicial</th>
+                                            <th class="px-3 py-2 text-left">Data Final</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${paginaLinhas.map(item => `
+                                            <tr class="border-b border-gray-200 dark:border-gray-700">
+                                                <td class="px-3 py-2">${item.nome}</td>
+                                                <td class="px-3 py-2">${item.cargo}</td>
+                                                <td class="px-3 py-2">${item.diasPeriodo}</td>
+                                                <td class="px-3 py-2">${item.diasTotal}</td>
+                                                <td class="px-3 py-2">${formatarDataParaExibicao(item.inicio)}</td>
+                                                <td class="px-3 py-2">${formatarDataParaExibicao(item.fim)}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    }
+                    break;
+                case 'banco_horas':
+                    const registrosBH = faltasNoPeriodo.filter(f => normalizarMotivo(f.motivo) === 'banco-horas');
+                    const porFuncionarioBH = {};
+                    registrosBH.forEach(f => {
+                        const key = f.matricula;
+                        const func = funcionarios.find(func => func.cadastro.toString() === f.matricula);
+                        if (!porFuncionarioBH[key]) {
+                            porFuncionarioBH[key] = { nome: f.nomeFuncionario, matricula: f.matricula, frente: func ? func.frente : '-', datas: [] };
                         }
+                        porFuncionarioBH[key].datas.push(f.data);
                     });
-                    listaFerias.sort((a, b) => a.inicio.localeCompare(b.inicio));
+                    const linhasBH = Object.values(porFuncionarioBH)
+                        .map(item => ({ ...item, diasTotal: item.datas.length, datasFormatadas: item.datas.sort((a,b)=>a.localeCompare(b)).map(d => formatarDataParaExibicao(d)).join(', ') }))
+                        .sort((a,b) => b.diasTotal - a.diasTotal);
                     conteudoHtml = `
-                        <h4 class="text-md font-semibold mt-4 mb-2">Férias no Período:</h4>
+                        <p>Total de Registros de Banco de Horas: <strong>${registrosBH.length}</strong></p>
+                        <h4 class="text-md font-semibold mt-4 mb-2">Resumo por Funcionário:</h4>
                         <div class="overflow-x-auto">
                             <table class="w-full table-auto text-sm">
                                 <thead>
                                     <tr class="bg-gray-100 dark:bg-gray-600">
                                         <th class="px-3 py-2 text-left">Funcionário</th>
-                                        <th class="px-3 py-2 text-left">Função</th>
-                                        <th class="px-3 py-2 text-left">Dias</th>
-                                        <th class="px-3 py-2 text-left">Data Inicial</th>
-                                        <th class="px-3 py-2 text-left">Data Final</th>
+                                        <th class="px-3 py-2 text-left">Matrícula</th>
+                                        <th class="px-3 py-2 text-left">Frente</th>
+                                        <th class="px-3 py-2 text-left">Dias de Banco</th>
+                                        <th class="px-3 py-2 text-left">Dias Utilizados</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${listaFerias.map(item => `
+                                    ${linhasBH.map(item => `
                                         <tr class="border-b border-gray-200 dark:border-gray-700">
                                             <td class="px-3 py-2">${item.nome}</td>
-                                            <td class="px-3 py-2">${item.cargo}</td>
-                                            <td class="px-3 py-2">${item.dias}</td>
-                                            <td class="px-3 py-2">${formatarDataParaExibicao(item.inicio)}</td>
-                                            <td class="px-3 py-2">${formatarDataParaExibicao(item.fim)}</td>
+                                            <td class="px-3 py-2">${item.matricula}</td>
+                                            <td class="px-3 py-2">${item.frente}</td>
+                                            <td class="px-3 py-2">${item.diasTotal}</td>
+                                            <td class="px-3 py-2">${item.datasFormatadas}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -4487,6 +4556,77 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
+
+        window.mudarPaginaRelatorio = function(delta) {
+            if (!window.relatorioFeriasLinhas || window.relatorioFeriasLinhas.length === 0) return;
+            window.relatorioPaginacao = window.relatorioPaginacao || { page: 1, pageSize: 50 };
+            const total = window.relatorioFeriasLinhas.length;
+            const pageSize = window.relatorioPaginacao.pageSize;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            const page = Math.min(Math.max(window.relatorioPaginacao.page + delta, 1), totalPages);
+            window.relatorioPaginacao.page = page;
+            const start = (page - 1) * pageSize;
+            const end = Math.min(start + pageSize, total);
+            const paginaLinhas = window.relatorioFeriasLinhas.slice(start, end);
+            const totalRegistrosFerias = window.relatorioFeriasLinhas.length;
+            const totalFuncionariosFerias = Array.from(new Set(window.relatorioFeriasLinhas.map(f => f.matricula))).length;
+            const conteudo = `
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-md font-semibold">Férias no Período</h4>
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm">Página ${page} de ${totalPages}</span>
+                        <span class="text-sm">Mostrando ${start + 1}–${end} de ${total}</span>
+                        <span class="text-sm">Registros (BD): ${totalRegistrosFerias}</span>
+                        <span class="text-sm">Funcionários com férias: ${totalFuncionariosFerias}</span>
+                        <select class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded" onchange="window.setPageSizeRelatorio(parseInt(this.value))">
+                            <option value="25"${pageSize===25?' selected':''}>25</option>
+                            <option value="50"${pageSize===50?' selected':''}>50</option>
+                            <option value="100"${pageSize===100?' selected':''}>100</option>
+                        </select>
+                        <div class="flex items-center gap-2">
+                            <button class="px-3 py-1 border rounded" onclick="window.mudarPaginaRelatorio(-1)">Anterior</button>
+                            <button class="px-3 py-1 border rounded" onclick="window.mudarPaginaRelatorio(1)">Próxima</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full table-auto text-sm">
+                        <thead>
+                            <tr class="bg-gray-100 dark:bg-gray-600">
+                                <th class="px-3 py-2 text-left">Funcionário</th>
+                                <th class="px-3 py-2 text-left">Função</th>
+                                <th class="px-3 py-2 text-left">Dias (no período)</th>
+                                <th class="px-3 py-2 text-left">Dias lançados</th>
+                                <th class="px-3 py-2 text-left">Data Inicial</th>
+                                <th class="px-3 py-2 text-left">Data Final</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${paginaLinhas.map(item => `
+                                <tr class="border-b border-gray-200 dark:border-gray-700">
+                                    <td class="px-3 py-2">${item.nome}</td>
+                                    <td class="px-3 py-2">${item.cargo}</td>
+                                    <td class="px-3 py-2">${item.diasPeriodo}</td>
+                                    <td class="px-3 py-2">${item.diasTotal}</td>
+                                    <td class="px-3 py-2">${formatarDataParaExibicao(item.inicio)}</td>
+                                    <td class="px-3 py-2">${formatarDataParaExibicao(item.fim)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('titulo-relatorio').textContent = window.relatorioFeriasTitulo || 'Relatório de Férias';
+            document.getElementById('conteudo-relatorio').innerHTML = conteudo;
+            document.getElementById('area-relatorio').classList.remove('hidden');
+        };
+
+        window.setPageSizeRelatorio = function(size) {
+            window.relatorioPaginacao = window.relatorioPaginacao || { page: 1, pageSize: 50 };
+            window.relatorioPaginacao.pageSize = size;
+            window.relatorioPaginacao.page = 1;
+            window.mudarPaginaRelatorio(0);
+        };
 
         function setLoading(on) {
             let bar = document.getElementById('global-loading');
