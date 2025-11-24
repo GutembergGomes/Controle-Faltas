@@ -2090,6 +2090,47 @@
             return motivos[motivo] || motivo;
         }
 
+        function normalizarMotivo(motivo) {
+            if (!motivo) return '';
+            const s = String(motivo).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+            switch (s) {
+                case 'doenca': return 'doença';
+                case 'atestado medico':
+                case 'atestado-medico':
+                    return 'atestado-medico';
+                case 'falta justificada':
+                case 'falta-justificada':
+                    return 'falta-justificada';
+                case 'falta injustificada':
+                case 'falta-injustificada':
+                    return 'falta-injustificada';
+                case 'licenca medica':
+                case 'licenca-medica':
+                    return 'licenca-medica';
+                case 'acidente de trabalho':
+                case 'acidente-trabalho':
+                    return 'acidente-trabalho';
+                case 'licenca maternidade':
+                case 'licenca-maternidade':
+                    return 'licenca-maternidade';
+                case 'licenca paternidade':
+                case 'licenca-paternidade':
+                    return 'licenca-paternidade';
+                case 'ferias':
+                    return 'ferias';
+                case 'abono':
+                    return 'abono';
+                case 'banco de horas':
+                case 'banco-horas':
+                    return 'banco-horas';
+                case 'dispensa por chuva':
+                case 'dispensa-chuva':
+                    return 'dispensa-chuva';
+                default:
+                    return s;
+            }
+        }
+
         function isPeriodoMotivo(motivo) {
             const set = new Set(['atestado-medico', 'ferias', 'banco-horas', 'licenca-maternidade', 'licenca-paternidade', 'licenca-medica']);
             return set.has(motivo);
@@ -2678,26 +2719,25 @@
 
         async function registrarFalta(e) {
             e.preventDefault();
-            
-            const data = document.getElementById('data-falta').value;
-            const matricula = document.getElementById('matricula-falta').value;
-            const motivo = document.getElementById('motivo-falta').value;
-            const observacoes = document.getElementById('observacoes').value;
-            const faltaId = document.getElementById('falta-id').value;
-            
-            const funcionario = funcionarios.find(f => f.cadastro.toString() === matricula);
-            const nomeFunc = funcionario ? funcionario.nome : (document.getElementById('nome-funcionario').value || '-');
+            try {
+                const data = document.getElementById('data-falta').value;
+                const matricula = document.getElementById('matricula-falta').value;
+                const motivo = document.getElementById('motivo-falta').value;
+                const observacoes = document.getElementById('observacoes').value;
+                const faltaId = document.getElementById('falta-id').value;
+                
+                const funcionario = funcionarios.find(f => f.cadastro.toString() === matricula);
+                const nomeFunc = funcionario ? funcionario.nome : (document.getElementById('nome-funcionario').value || '-');
 
             if (isPeriodoMotivo(motivo)) {
                 const dataInicialAtestado = document.getElementById('data-inicial-atestado').value;
-                const duracaoAtestado = parseInt(document.getElementById('duracao-atestado').value);
+                let duracaoAtestado = parseInt(document.getElementById('duracao-atestado').value);
 
-                if (!dataInicialAtestado || !duracaoAtestado || duracaoAtestado <= 0) {
+                const motivoNorm = normalizarMotivo(motivo);
+                if (!dataInicialAtestado || (motivoNorm !== 'ferias' && (!duracaoAtestado || duracaoAtestado <= 0))) {
                     showMessage('Para período, informe data inicial e duração válidas!', 'error');
                     return;
                 }
-
-                const motivoNorm = normalizarMotivo(motivo);
                 if (motivoNorm === 'ferias') {
                     if (!duracaoAtestado || duracaoAtestado <= 0) { duracaoAtestado = 30; }
                     const datasAtestado = gerarDatasPeriodo(dataInicialAtestado, duracaoAtestado);
@@ -2805,6 +2845,10 @@
                     localStorage.setItem('faltas', JSON.stringify(faltas));
                     cancelarEdicao();
                 }
+            }
+            } catch (error) {
+                console.error('Erro ao registrar falta:', error);
+                showMessage('Erro ao registrar falta: ' + (error && error.message ? error.message : String(error)), 'error');
             }
         }
 
