@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Controle de Faltas - Agrícola CCT</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: 'class' };</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
     <!-- Supabase JS (UMD) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.js"></script>
@@ -66,6 +67,20 @@
             font-weight: 600;
             border-radius: 0.375rem;
         }
+        :root { --primary: #5D5CDE; --bg: #f7f7fb; --bg2: #eef2ff; }
+        body { background: radial-gradient(1200px circle at 10% 10%, var(--bg2) 0, #f8fafc 40%, var(--bg) 100%); }
+        .dark body { background: radial-gradient(1200px circle at 10% 10%, #0b1220 0, #0f172a 40%, #111827 100%); }
+        .tab-button { border-bottom: 2px solid transparent; border-radius: 0.5rem; transition: all .2s ease; }
+        .tab-button.active { background: transparent; color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+        .modern-nav { backdrop-filter: blur(8px) saturate(120%); }
+        .stat-card { backdrop-filter: saturate(120%) blur(4px); }
+        input, select, textarea, button { border-radius: 0.75rem; }
+        .dark body { color: #e5e7eb; }
+        .dark .text-gray-900, .dark .text-gray-800, .dark .text-gray-700 { color: #e5e7eb !important; }
+        .dark .text-gray-600 { color: #d1d5db !important; }
+        .dark .text-gray-500 { color: #cbd5e1 !important; }
+        .dark ::placeholder { color: #94a3b8; }
+        .dark td, .dark th { color: #e5e7eb; }
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 min-h-screen">
@@ -85,6 +100,9 @@
                 </div>
                 <div class="flex items-center gap-3">
                     <span id="user-email" class="text-sm text-gray-600 dark:text-gray-300 hidden"></span>
+                    <button id="btn-toggle-theme" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition" title="Alternar tema">
+                        <i id="icon-theme" class="fas fa-moon"></i>
+                    </button>
                     <button id="btn-login" class="px-4 py-2 bg-[#5D5CDE] text-white rounded-lg hover:bg-[#4A4BC9] transition">
                         <i class="fas fa-user mr-2"></i>Entrar
                     </button>
@@ -96,7 +114,7 @@
         </div>
 
         <!-- Tabs Navigation -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg mb-6 modern-nav">
             <div class="flex flex-wrap border-b border-gray-200 dark:border-gray-700">
                 <button onclick="showTab('dashboard')" 
                         class="tab-button px-6 py-3 font-medium text-gray-500 dark:text-gray-400 hover:text-[#5D5CDE] focus:outline-none active" 
@@ -2065,6 +2083,14 @@
             }, 5000);
         }
 
+        function applyTheme(theme) {
+            const root = document.documentElement;
+            if (theme === 'dark') root.classList.add('dark'); else root.classList.remove('dark');
+            const icon = document.getElementById('icon-theme');
+            if (icon) icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            try { localStorage.setItem('theme', theme); } catch (e) {}
+        }
+
         function formatarDataParaExibicao(dataISO) {
             if (!dataISO) return '-';
             const [ano, mes, dia] = dataISO.split('-');
@@ -2176,6 +2202,7 @@
             try { if (!localStorage.getItem('adminPasswordHash')) { await setAdminPassword('Guto1006'); } } catch (e) {}
             await initSupabase();
             setupEventListeners();
+            try { applyTheme(localStorage.getItem('theme') || 'light'); } catch (e) { applyTheme('light'); }
             
             // Definir data atual no formulário
             document.getElementById('data-falta').value = new Date().toISOString().split('T')[0];
@@ -2277,6 +2304,13 @@
             // Botão novo funcionário
             document.getElementById('btn-novo-funcionario').addEventListener('click', abrirModalFuncionario);
             document.getElementById('func-cancel').addEventListener('click', fecharModalFuncionario);
+            const btnTheme = document.getElementById('btn-toggle-theme');
+            if (btnTheme) {
+                btnTheme.addEventListener('click', () => {
+                    const isDark = document.documentElement.classList.contains('dark');
+                    applyTheme(isDark ? 'light' : 'dark');
+                });
+            }
         }
 
         // ===== FUNÇÕES DE NAVEGAÇÃO =====
@@ -2742,8 +2776,16 @@
                     if (!duracaoAtestado || duracaoAtestado <= 0) { duracaoAtestado = 30; }
                     const datasAtestado = gerarDatasPeriodo(dataInicialAtestado, duracaoAtestado);
                     const fimPeriodo = datasAtestado[duracaoAtestado - 1];
-                    const jaExiste = faltas.find(f => normalizarMotivo(f.motivo) === 'ferias' && f.matricula === matricula && f.data === dataInicialAtestado);
-                    if (jaExiste) { showMessage('Já existe férias registrada com esta data inicial!', 'error'); return; }
+                    const existeOverlap = faltas.some(f => {
+                        if (normalizarMotivo(f.motivo) !== 'ferias' || f.matricula !== matricula) return false;
+                        const inicioExist = f.data;
+                        let durExist = parseInt(f.diasAtestado);
+                        if (!durExist || durExist <= 0) durExist = 30;
+                        const diasExist = gerarDatasPeriodo(inicioExist, durExist);
+                        const fimExist = diasExist[durExist - 1];
+                        return !(fimPeriodo < inicioExist || dataInicialAtestado > fimExist);
+                    });
+                    if (existeOverlap) { showMessage('Já existe férias registrada que abrange este período!', 'error'); return; }
                     const faltaUnica = {
                         matricula,
                         nomeFuncionario: nomeFunc,
