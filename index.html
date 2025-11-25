@@ -100,6 +100,9 @@
                 </div>
                 <div class="flex items-center gap-3">
                     <span id="user-email" class="text-sm text-gray-600 dark:text-gray-300 hidden"></span>
+                    <span id="perm-delete-badge" class="hidden inline-flex items-center gap-2 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-800 px-3 py-1 rounded-full text-xs font-semibold" title="Permissão necessária para excluir">
+                        <i class="fas fa-shield-alt"></i> Sem permissão para excluir
+                    </span>
                     <button id="btn-toggle-theme" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition" title="Alternar tema">
                         <i id="icon-theme" class="fas fa-moon"></i>
                     </button>
@@ -907,22 +910,7 @@
                 </div>
                 
                 <!-- Limpeza de Dados -->
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                        <i class="fas fa-trash-alt text-red-500 mr-2"></i>Limpeza de Dados
-                    </h3>
-                    
-                    <div class="border border-red-200 dark:border-red-800 rounded-lg p-4 bg-red-50 dark:bg-red-900/10">
-                        <h4 class="font-medium text-red-900 dark:text-red-300 mb-2">Limpar Todos os Dados</h4>
-                        <p class="text-sm text-red-700 dark:text-red-400 mb-4">
-                            ⚠️ Esta ação removerá permanentemente TODAS as faltas registradas. Esta ação não pode ser desfeita.
-                        </p>
-                        <button onclick="confirmarLimpeza()" 
-                                class="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition duration-200">
-                            <i class="fas fa-trash-alt mr-2"></i>Limpar Dados
-                        </button>
-                    </div>
-                </div>
+                
             </div>
         </div>
     </div>
@@ -1736,6 +1724,7 @@
             const emailEl = document.getElementById('user-email');
             const btnLogin = document.getElementById('btn-login');
             const btnLogout = document.getElementById('btn-logout');
+            const badge = document.getElementById('perm-delete-badge');
 
             if (session && session.user) {
                 emailEl.textContent = session.user.email;
@@ -1746,6 +1735,11 @@
                 emailEl.classList.add('hidden');
                 btnLogout.classList.add('hidden');
                 btnLogin.classList.remove('hidden');
+            }
+
+            if (badge) {
+                if (canDelete()) badge.classList.add('hidden');
+                else badge.classList.remove('hidden');
             }
         }
 
@@ -2018,7 +2012,7 @@
 
         async function excluirFaltaDB(faltaId) {
             try {
-                if (!sb || !session) return true;
+                if (!sb || !session || !canDelete()) { showMessage('Sem permissão para excluir no banco.', 'error'); return false; }
                 const { error } = await sb
                     .from('faltas')
                     .delete()
@@ -2089,6 +2083,11 @@
             const icon = document.getElementById('icon-theme');
             if (icon) icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
             try { localStorage.setItem('theme', theme); } catch (e) {}
+        }
+
+        function canDelete() {
+            const email = session && session.user && session.user.email;
+            return !!email && email.toLowerCase() === 'gutemberggg10@gmail.com';
         }
 
         function formatarDataParaExibicao(dataISO) {
@@ -3067,6 +3066,7 @@
         }
 
         async function excluirFaltasEmLote() {
+            if (!canDelete()) { showMessage('Sem permissão para excluir. Faça login com o email autorizado.', 'error'); return; }
             const faltasSelecionadas = obterFaltasSelecionadas();
             
             if (faltasSelecionadas.length === 0) {
@@ -3082,7 +3082,7 @@
                     let excluidasComSucesso = 0;
 
                     // Uma chamada de banco só para todas as faltas selecionadas
-                    const sucessoDB = session ? await excluirFaltasDBLote(faltasSelecionadas) : true;
+                    const sucessoDB = await excluirFaltasDBLote(faltasSelecionadas);
                     
                     if (sucessoDB) {
                         // Remove localmente de uma vez (menos re-render)
@@ -3201,6 +3201,7 @@
         }
 
         async function excluirFalta(faltaId) {
+            if (!canDelete()) { showMessage('Sem permissão para excluir. Faça login com o email autorizado.', 'error'); return; }
             const falta = faltas.find(f => f.id.toString() === faltaId);
             if (!falta) return;
             
@@ -3210,7 +3211,7 @@
                 async () => {
                     const sucessoDB = await excluirFaltaDB(faltaId);
                     
-                    if (sucessoDB || !session) {
+                    if (sucessoDB) {
                         const index = faltas.findIndex(f => f.id.toString() === faltaId);
                         if (index !== -1) {
                             faltas.splice(index, 1);
@@ -4765,7 +4766,7 @@
         }
 
         async function excluirFaltasDBLote(ids) {
-            if (!session) return true;
+            if (!session || !canDelete()) { showMessage('Sem permissão para excluir no banco.', 'error'); return false; }
             const idsNum = ids.map(i => parseInt(i)).filter(n => !isNaN(n));
             const { error } = await sb.from('faltas').delete().in('id', idsNum);
             if (error) throw error;
