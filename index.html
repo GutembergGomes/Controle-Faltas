@@ -1778,6 +1778,7 @@
                     session = newSession;
                     updateAuthUI();
                     await carregarUsuariosDB();
+                    applyVisibilityPermissions();
                     const emailNow = newSession && newSession.user ? newSession.user.email : null;
                     if (emailNow && !isAuthorizedEmail(emailNow)) {
                         showMessage('Acesso pendente de autorização', 'warning');
@@ -1910,6 +1911,7 @@
                 showMessage('Login realizado com sucesso!', 'success');
                 if (data && data.session) { session = data.session; updateAuthUI(); }
                 await carregarUsuariosDB();
+                applyVisibilityPermissions();
                 const ok = isAuthorizedEmail(email);
                 if (!ok) {
                     showMessage('Acesso pendente de autorização', 'warning');
@@ -2218,9 +2220,11 @@
         }
 
         function getUserPermissions(email) {
-            const u = usuarios.find(x => (x.email || '').toLowerCase() === (email || '').toLowerCase());
+            const e = (email || '').toLowerCase();
             const full = { dashboard: true, funcionarios: true, registro: true, consulta: true, historico: true, relatorios: true, configuracao: true };
-            if (!u) return full;
+            if (isAdminEmail(e)) return full;
+            const u = usuarios.find(x => (x.email || '').toLowerCase() === e);
+            if (!u) return { dashboard: true };
             if (!u.authorized) return { dashboard: true };
             return u.permissions || full;
         }
