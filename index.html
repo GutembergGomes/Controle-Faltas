@@ -154,6 +154,11 @@
                         id="tab-configuracao">
                     <i class="fas fa-cogs mr-2"></i>Configurações
                 </button>
+                <button onclick="showTab('admin')"
+                        class="tab-button hidden px-6 py-3 font-medium text-gray-500 dark:text-gray-400 hover:text-[#5D5CDE] focus:outline-none"
+                        id="tab-admin">
+                    <i class="fas fa-shield-alt mr-2"></i>Admin
+                </button>
             </div>
         </div>
 
@@ -913,6 +918,51 @@
                 
             </div>
         </div>
+
+        <!-- Admin Tab -->
+        <div id="admin-content" class="tab-content">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6">Painel Administrativo</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-gray-900 dark:text-white" id="admin-total-usuarios">0</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400">Total de Usuários</div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-gray-900 dark:text-white" id="admin-usuarios-online">0</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400">Usuários Online</div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
+                        <div class="text-2xl font-bold text-gray-900 dark:text-white" id="admin-pendentes">0</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400">Pendentes de Autorização</div>
+                    </div>
+                </div>
+                <div class="flex flex-col md:flex-row gap-3 mb-4 items-end">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Adicionar Email</label>
+                        <input type="email" id="admin-add-email" placeholder="email@exemplo.com" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#5D5CDE] dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <button id="admin-add-btn" class="bg-[#5D5CDE] text-white px-4 py-2 rounded-lg hover:bg-[#4A4BC9] transition"><i class="fas fa-plus mr-2"></i>Adicionar</button>
+                    <button id="admin-reload-btn" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"><i class="fas fa-sync-alt mr-2"></i>Recarregar do Banco</button>
+                    <span id="admin-users-source" class="text-sm text-gray-600 dark:text-gray-300"></span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full table-auto text-sm">
+                        <thead>
+                            <tr class="bg-gray-100 dark:bg-gray-600">
+                                <th class="px-3 py-2 text-left">Email</th>
+                                <th class="px-3 py-2 text-left">Autorizado</th>
+                                <th class="px-3 py-2 text-left">Online</th>
+                                <th class="px-3 py-2 text-left">Último Visto</th>
+                                <th class="px-3 py-2 text-left">Ações</th>
+                                <th class="px-3 py-2 text-left">Permissões</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-users-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Modal de Confirmação Customizado -->
@@ -1004,6 +1054,27 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal de Permissões de Usuário -->
+    <div id="modal-permissoes" class="modal">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-lg w-full mx-4">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Permissões de Visualização</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-300 mb-4" id="perm-user-email"></p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label class="flex items-center gap-2"><input type="checkbox" id="perm-dashboard">Dashboard</label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="perm-funcionarios">Funcionários</label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="perm-registro">Registrar Falta</label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="perm-consulta">Consultar Faltas</label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="perm-historico">Histórico</label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="perm-relatorios">Relatórios</label>
+                <label class="flex items-center gap-2"><input type="checkbox" id="perm-configuracao">Configurações</label>
+            </div>
+            <div class="flex justify-end gap-3 mt-4">
+                <button id="perm-cancel" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">Cancelar</button>
+                <button id="perm-save" class="px-4 py-2 bg-[#5D5CDE] text-white hover:bg-[#4A4BC9] rounded">Salvar</button>
+            </div>
         </div>
     </div>
 
@@ -1217,6 +1288,9 @@
         let funcionarios = JSON.parse(localStorage.getItem('funcionarios') || '[]');
         let faltas = JSON.parse(localStorage.getItem('faltas') || '[]');
         let historico = JSON.parse(localStorage.getItem('historico') || '[]');
+        let usuarios = JSON.parse(localStorage.getItem('usuarios') || '[]');
+        let usuariosFonte = 'local';
+        let usuarioEditandoPermissoes = null;
 
         // ===== UTILS =====
         function debounce(func, delay) {
@@ -1691,6 +1765,7 @@
 
                 session = currentSession;
                 updateAuthUI();
+                await carregarUsuariosDB();
 
                 await carregarFuncionariosDB();
                 await Promise.allSettled([
@@ -1701,6 +1776,19 @@
                 sb.auth.onAuthStateChange(async (event, newSession) => {
                     session = newSession;
                     updateAuthUI();
+                    await carregarUsuariosDB();
+                    const emailNow = newSession && newSession.user ? newSession.user.email : null;
+                    if (emailNow && !isAuthorizedEmail(emailNow)) {
+                        showMessage('Acesso pendente de autorização', 'warning');
+                        try { await sb.auth.signOut(); } catch {}
+                        return;
+                    }
+                    if (emailNow) {
+                        await marcarUsuarioOnline();
+                        if (!window.presencaTimer) window.presencaTimer = setInterval(marcarUsuarioOnline, 30000);
+                    } else {
+                        if (window.presencaTimer) { clearInterval(window.presencaTimer); window.presencaTimer = null; }
+                    }
                     await carregarFuncionariosDB();
                     await Promise.allSettled([
                         carregarFaltasDB(),
@@ -1725,6 +1813,8 @@
             const btnLogin = document.getElementById('btn-login');
             const btnLogout = document.getElementById('btn-logout');
             const badge = document.getElementById('perm-delete-badge');
+            const adminTab = document.getElementById('tab-admin');
+            const isAdmin = session && session.user && session.user.email && session.user.email.toLowerCase() === 'gutemberggg10@gmail.com';
 
             if (session && session.user) {
                 emailEl.textContent = session.user.email;
@@ -1741,6 +1831,12 @@
                 if (canDelete()) badge.classList.add('hidden');
                 else badge.classList.remove('hidden');
             }
+
+            if (adminTab) {
+                if (isAdmin) adminTab.classList.remove('hidden'); else adminTab.classList.add('hidden');
+            }
+
+            applyVisibilityPermissions();
         }
 
         function abrirModalAuth() {
@@ -1761,6 +1857,7 @@
                 showMessage('Erro ao sair: ' + error.message, 'error');
             } else {
                 showMessage('Logout realizado com sucesso', 'success');
+                await marcarUsuarioOffline();
             }
         });
 
@@ -1785,6 +1882,8 @@
                 showMessage('Erro ao criar conta: ' + error.message, 'error');
             } else {
                 showMessage('Conta criada com sucesso! Verifique seu email.', 'success');
+                let u = usuarios.find(x => (x.email || '').toLowerCase() === email.toLowerCase());
+                if (!u) { u = { email, authorized: false, online: false, lastSeen: null }; usuarios.push(u); syncUsuariosLocal(); await salvarUsuarioDB(u); }
                 fecharModalAuth();
             }
         });
@@ -1811,6 +1910,15 @@
             } else {
                 showMessage('Login realizado com sucesso!', 'success');
                 if (data && data.session) { session = data.session; updateAuthUI(); }
+                await carregarUsuariosDB();
+                const ok = isAuthorizedEmail(email);
+                if (!ok) {
+                    showMessage('Acesso pendente de autorização', 'warning');
+                    await sb.auth.signOut();
+                    return;
+                }
+                await marcarUsuarioOnline();
+                if (!window.presencaTimer) window.presencaTimer = setInterval(marcarUsuarioOnline, 30000);
                 fecharModalAuth();
             }
         });
@@ -2090,6 +2198,223 @@
             return !!email && email.toLowerCase() === 'gutemberggg10@gmail.com';
         }
 
+        function isAuthorizedEmail(email) {
+            if (!email) return false;
+            const e = email.toLowerCase();
+            if (e === 'gutemberggg10@gmail.com') return true;
+            const u = usuarios.find(x => (x.email || '').toLowerCase() === e);
+            return !!(u && u.authorized === true);
+        }
+
+        function syncUsuariosLocal() {
+            try { localStorage.setItem('usuarios', JSON.stringify(usuarios)); } catch (e) {}
+        }
+
+        function getUserPermissions(email) {
+            const u = usuarios.find(x => (x.email || '').toLowerCase() === (email || '').toLowerCase());
+            const full = { dashboard: true, funcionarios: true, registro: true, consulta: true, historico: true, relatorios: true, configuracao: true };
+            if (!u) return full;
+            if (!u.authorized) return { dashboard: true };
+            return u.permissions || full;
+        }
+
+        function setUserPermissions(email, perms) {
+            const e = (email || '').toLowerCase();
+            let u = usuarios.find(x => (x.email || '').toLowerCase() === e);
+            if (!u) { u = { email, authorized: false, online: false, lastSeen: null, permissions: perms }; usuarios.push(u); }
+            else { u.permissions = perms; }
+            syncUsuariosLocal();
+            renderAdmin();
+            applyVisibilityPermissions();
+            showMessage('Permissões atualizadas', 'success');
+        }
+
+        function applyVisibilityPermissions() {
+            const adminTab = document.getElementById('tab-admin');
+            const email = session && session.user ? session.user.email : null;
+            const isAdmin = !!email && email.toLowerCase() === 'gutemberggg10@gmail.com';
+            if (adminTab) { if (isAdmin) adminTab.classList.remove('hidden'); else adminTab.classList.add('hidden'); }
+
+            const perms = getUserPermissions(email);
+            const map = {
+                dashboard: 'tab-dashboard', funcionarios: 'tab-funcionarios', registro: 'tab-registro', consulta: 'tab-consulta', historico: 'tab-historico', relatorios: 'tab-relatorios', configuracao: 'tab-configuracao'
+            };
+            Object.entries(map).forEach(([key, btnId]) => {
+                const btn = document.getElementById(btnId);
+                if (!btn) return;
+                const allowed = !!(perms && perms[key]);
+                btn.style.display = allowed ? '' : 'none';
+                const content = document.getElementById(`${key}-content`);
+                if (content && !allowed) content.classList.remove('active');
+            });
+        }
+
+        function abrirModalPermissoes(email) {
+            usuarioEditandoPermissoes = email;
+            const el = document.getElementById('modal-permissoes');
+            document.getElementById('perm-user-email').textContent = email;
+            const p = getUserPermissions(email);
+            ['dashboard','funcionarios','registro','consulta','historico','relatorios','configuracao'].forEach(k => {
+                const cb = document.getElementById(`perm-${k}`);
+                if (cb) cb.checked = !!p[k];
+            });
+            el.classList.add('active');
+        }
+
+        function fecharModalPermissoes() {
+            const el = document.getElementById('modal-permissoes');
+            el.classList.remove('active');
+            usuarioEditandoPermissoes = null;
+        }
+
+        function salvarModalPermissoes() {
+            if (!usuarioEditandoPermissoes) return;
+            const perms = {};
+            ['dashboard','funcionarios','registro','consulta','historico','relatorios','configuracao'].forEach(k => {
+                const cb = document.getElementById(`perm-${k}`);
+                perms[k] = !!(cb && cb.checked);
+            });
+            fecharModalPermissoes();
+            setUserPermissions(usuarioEditandoPermissoes, perms);
+        }
+
+        async function carregarUsuariosDB() {
+            try {
+                if (!sb) throw new Error('Supabase indisponível');
+                const pageSize = 1000;
+                let from = 0;
+                let all = [];
+                while (true) {
+                    const { data, error } = await sb
+                        .from('usuarios')
+                        .select('email,authorized,online,last_seen,permissions')
+                        .order('email', { ascending: true })
+                        .range(from, from + pageSize - 1);
+                    if (error) throw error;
+                    if (!data || data.length === 0) break;
+                    all = all.concat(data);
+                    if (data.length < pageSize) break;
+                    from += pageSize;
+                }
+
+                usuarios = all.map(r => ({
+                    email: r.email,
+                    authorized: !!r.authorized,
+                    online: !!r.online,
+                    lastSeen: r.last_seen || null,
+                    permissions: r.permissions || null
+                }));
+                syncUsuariosLocal();
+                usuariosFonte = 'banco';
+                showMessage('Usuários carregados do banco', 'success');
+            } catch (error) {
+                usuarios = JSON.parse(localStorage.getItem('usuarios') || '[]');
+                usuariosFonte = 'local';
+                showMessage('Usando usuários do armazenamento local', 'warning');
+            }
+        }
+
+        async function salvarUsuarioDB(user) {
+            try {
+                if (!sb) return true;
+                const { error } = await sb
+                    .from('usuarios')
+                    .upsert({
+                        email: user.email,
+                        authorized: !!user.authorized,
+                        online: !!user.online,
+                        last_seen: user.lastSeen || null
+                    }, { onConflict: 'email' });
+                if (error) throw error;
+                return true;
+            } catch (error) {
+                return false;
+            }
+        }
+
+        async function setUserAuthorized(email, value) {
+            const e = (email || '').toLowerCase();
+            let u = usuarios.find(x => (x.email || '').toLowerCase() === e);
+            if (!u) { u = { email: email, authorized: !!value, online: false, lastSeen: null }; usuarios.push(u); } else { u.authorized = !!value; }
+            syncUsuariosLocal();
+            await salvarUsuarioDB(u);
+            renderAdmin();
+            showMessage(value ? 'Usuário autorizado' : 'Autorização revogada', value ? 'success' : 'warning');
+        }
+
+        function renderAdmin() {
+            const tbody = document.getElementById('admin-users-tbody');
+            if (!tbody) return;
+            historico.forEach(r => {
+                const e = (r.usuario || '').toLowerCase();
+                if (e && e.includes('@')) {
+                    if (!usuarios.find(x => (x.email || '').toLowerCase() === e)) usuarios.push({ email: r.usuario, authorized: false, online: false, lastSeen: null });
+                }
+            });
+            syncUsuariosLocal();
+            const total = usuarios.length;
+            const online = usuarios.filter(u => u.online).length;
+            const pendentes = usuarios.filter(u => !u.authorized).length;
+            const elTotal = document.getElementById('admin-total-usuarios');
+            const elOnline = document.getElementById('admin-usuarios-online');
+            const elPend = document.getElementById('admin-pendentes');
+            const src = document.getElementById('admin-users-source');
+            if (elTotal) elTotal.textContent = String(total);
+            if (elOnline) elOnline.textContent = String(online);
+            if (elPend) elPend.textContent = String(pendentes);
+            if (src) src.textContent = `Fonte: ${usuariosFonte === 'banco' ? 'Banco' : 'Local'}`;
+            tbody.innerHTML = usuarios.map(u => {
+                const ls = u.lastSeen ? new Date(u.lastSeen).toLocaleString('pt-BR') : '-';
+                const a1 = `<button class="px-3 py-1 border rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-700" onclick="autorizarUsuario('${u.email}', true)">Autorizar</button>`;
+                const a2 = `<button class="px-3 py-1 border rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-700" onclick="autorizarUsuario('${u.email}', false)">Revogar</button>`;
+                const pBtn = `<button class="px-3 py-1 border rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-700" onclick="abrirModalPermissoes('${u.email}')">Editar</button>`;
+                return `<tr class="border-b border-gray-200 dark:border-gray-700">
+                    <td class="px-3 py-2">${u.email}</td>
+                    <td class="px-3 py-2">${u.authorized ? 'Sim' : 'Não'}</td>
+                    <td class="px-3 py-2">${u.online ? 'Sim' : 'Não'}</td>
+                    <td class="px-3 py-2">${ls}</td>
+                    <td class="px-3 py-2 flex gap-2">${a1}${a2}</td>
+                    <td class="px-3 py-2">${pBtn}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function adicionarUsuarioEmail() {
+            const input = document.getElementById('admin-add-email');
+            if (!input) return;
+            const email = (input.value || '').trim();
+            if (!email) { showMessage('Informe um email', 'error'); return; }
+            let u = usuarios.find(x => (x.email || '').toLowerCase() === email.toLowerCase());
+            if (!u) { u = { email, authorized: true, online: false, lastSeen: null }; usuarios.push(u); }
+            else { u.authorized = true; }
+            syncUsuariosLocal();
+            await salvarUsuarioDB(u);
+            input.value = '';
+            renderAdmin();
+            showMessage('Email adicionado e autorizado', 'success');
+        }
+
+        async function marcarUsuarioOnline() {
+            if (!session || !session.user || !session.user.email) return;
+            const email = session.user.email;
+            let u = usuarios.find(x => (x.email || '').toLowerCase() === email.toLowerCase());
+            if (!u) { u = { email, authorized: isAuthorizedEmail(email), online: true, lastSeen: new Date().toISOString() }; usuarios.push(u); }
+            else { u.online = true; u.lastSeen = new Date().toISOString(); }
+            syncUsuariosLocal();
+            await salvarUsuarioDB(u);
+            renderAdmin();
+        }
+
+        async function marcarUsuarioOffline() {
+            if (!session || !session.user || !session.user.email) return;
+            const email = session.user.email;
+            let u = usuarios.find(x => (x.email || '').toLowerCase() === email.toLowerCase());
+            if (u) { u.online = false; u.lastSeen = new Date().toISOString(); syncUsuariosLocal(); await salvarUsuarioDB(u); }
+            renderAdmin();
+        }
+
+        function autorizarUsuario(email, valor) { setUserAuthorized(email, valor); }
+
         function formatarDataParaExibicao(dataISO) {
             if (!dataISO) return '-';
             const [ano, mes, dia] = dataISO.split('-');
@@ -2313,7 +2638,7 @@
         }
 
         // ===== FUNÇÕES DE NAVEGAÇÃO =====
-        const TAB_IDS = ['dashboard', 'funcionarios', 'registro', 'consulta', 'historico', 'relatorios', 'configuracao'];
+        const TAB_IDS = ['dashboard', 'funcionarios', 'registro', 'consulta', 'historico', 'relatorios', 'configuracao', 'admin'];
 
         function getContent(id) { return document.getElementById(`${id}-content`); }
         function getButton(id) { return document.getElementById(`tab-${id}`); }
@@ -2323,9 +2648,17 @@
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
 
+            const email = session && session.user ? session.user.email : null;
+            const isAdmin = !!email && email.toLowerCase() === 'gutemberggg10@gmail.com';
+            const perms = getUserPermissions(email);
+            const allowed = isAdmin || (perms && (perms[tabId] || tabId === 'dashboard'));
+            const button = getButton(tabId);
+            if (button && button.style.display === 'none') {
+                if (!allowed) { showMessage('Você não tem permissão para acessar esta aba', 'warning'); return; }
+            }
+
             // Ativar alvo
             const content = getContent(tabId);
-            const button = getButton(tabId);
             if (content) content.classList.add('active');
             if (button) button.classList.add('active');
 
@@ -2362,6 +2695,8 @@
                 if (matEl && matEl.value) buscarFuncionario();
                 const atestadoFields = document.getElementById('atestado-fields');
                 if (atestadoFields) atestadoFields.style.display = 'none';
+            } else if (tabId === 'admin') {
+                carregarUsuariosDB().then(renderAdmin);
             }
         }
 
@@ -2386,6 +2721,17 @@
                 showTab('dashboard');
             }
         }
+
+        window.addEventListener('beforeunload', async () => { try { await marcarUsuarioOffline(); } catch {} });
+
+        const addBtn = document.getElementById('admin-add-btn');
+        if (addBtn) addBtn.addEventListener('click', adicionarUsuarioEmail);
+        const permCancel = document.getElementById('perm-cancel');
+        const permSave = document.getElementById('perm-save');
+        if (permCancel) permCancel.addEventListener('click', fecharModalPermissoes);
+        if (permSave) permSave.addEventListener('click', salvarModalPermissoes);
+        const reloadBtn = document.getElementById('admin-reload-btn');
+        if (reloadBtn) reloadBtn.addEventListener('click', () => carregarUsuariosDB().then(renderAdmin));
 
         // ===== FUNCIONÁRIOS =====
         function carregarFuncionarios() {
@@ -3353,10 +3699,10 @@
         }
 
         // ===== DASHBOARD =====
-        let graficoMotivos = null;
-        let graficoEvolucao = null;
-        let graficoSetores = null;
-        let graficoTurnos = null;
+        var graficoMotivos = null;
+        var graficoEvolucao = null;
+        var graficoSetores = null;
+        var graficoTurnos = null;
         // Aviso único caso Chart.js não esteja disponível
         let avisouChartsIndisponiveis = false;
 
@@ -3532,7 +3878,7 @@
                 motivos[falta.motivo] = (motivos[falta.motivo] || 0) + 1;
             });
             
-            const graficoMotivos = {
+            const graficoMotivosData = {
                 labels: Object.keys(motivos).map(m => getMotivoLabel(m)),
                 data: Object.values(motivos),
                 cores: Object.keys(motivos).map(m => {
@@ -3551,7 +3897,7 @@
                 })
             };
             
-            const graficoEvolucao = {
+            const graficoEvolucaoData = {
                 labels: [],
                 data: []
             };
@@ -3559,7 +3905,7 @@
             for (let i = 5; i >= 0; i--) {
                 const data = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
                 const mesAno = data.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
-                graficoEvolucao.labels.push(mesAno);
+                graficoEvolucaoData.labels.push(mesAno);
                 
                 const faltasMes = faltas.filter(f => {
                     const dataFalta = new Date(f.data + 'T12:00:00');
@@ -3568,7 +3914,7 @@
                            dataFalta.getFullYear() === data.getFullYear();
                 }).length;
                 
-                graficoEvolucao.data.push(faltasMes);
+                graficoEvolucaoData.data.push(faltasMes);
             }
             
             const setores = {};
@@ -3580,7 +3926,7 @@
                 }
             });
             
-            const graficoSetores = {
+            const graficoSetoresData = {
                 labels: Object.keys(setores),
                 data: Object.values(setores),
                 cores: Object.keys(setores).map((_, i) => {
@@ -3598,7 +3944,7 @@
                 }
             });
             
-            const graficoTurnos = {
+            const graficoTurnosData = {
                 labels: Object.keys(turnos),
                 data: Object.values(turnos),
                 cores: Object.keys(turnos).map((_, i) => {
@@ -3691,10 +4037,10 @@
                 faltasInjustificadas,
                 mediaFaltas,
                 funcionariosSemFaltas,
-                graficoMotivos,
-                graficoEvolucao,
-                graficoSetores,
-                graficoTurnos,
+                graficoMotivos: graficoMotivosData,
+                graficoEvolucao: graficoEvolucaoData,
+                graficoSetores: graficoSetoresData,
+                graficoTurnos: graficoTurnosData,
                 topFaltas,
                 faltasHoje,
                 adminRegistrosPeriodo,
