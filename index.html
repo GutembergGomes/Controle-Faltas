@@ -527,6 +527,11 @@
                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#5D5CDE] focus:border-transparent dark:bg-gray-700 dark:text-white text-base">
                             </div>
                         </div>
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Foto do Atestado (imagem)</label>
+                            <input type="file" id="atestado-foto" accept="image/*" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#5D5CDE] focus:border-transparent dark:bg-gray-700 dark:text-white text-base">
+                            <div id="atestado-foto-preview" class="mt-2"></div>
+                        </div>
                         <div class="mt-2 text-sm text-gray-600 dark:text-gray-400">
                             <p id="info-datas-atestado" class="hidden"></p>
                         </div>
@@ -1144,6 +1149,30 @@
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Opcional. Você pode informar a data.</p>
                 </div>
+
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-2">
+                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                        <i class="fas fa-id-card"></i> Dados da CNH <span class="text-xs font-normal text-gray-500">(Obrigatório para Motoristas)</span>
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Número CNH</label>
+                            <input type="text" id="func-cnh" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                        </div>
+                        <div class="md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expedição</label>
+                            <input type="date" id="func-cnh-expedicao" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                        </div>
+                        <div class="md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vencimento</label>
+                            <input type="date" id="func-cnh-vencimento" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Foto da CNH</label>
+                        <input type="file" id="func-cnh-foto" accept="image/*" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                    </div>
+                </div>
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" id="func-cancel" 
                             class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
@@ -1223,6 +1252,33 @@
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Admissão</label>
                     <input type="date" id="edit-func-admissao"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                </div>
+
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-2">
+                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                        <i class="fas fa-id-card"></i> Dados da CNH <span class="text-xs font-normal text-gray-500">(Obrigatório para Motoristas)</span>
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Número CNH</label>
+                            <input type="text" id="edit-func-cnh" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                        </div>
+                        <div class="md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expedição</label>
+                            <input type="date" id="edit-func-cnh-expedicao" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                        </div>
+                        <div class="md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vencimento</label>
+                            <input type="date" id="edit-func-cnh-vencimento" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Foto da CNH</label>
+                        <div class="flex items-center gap-2">
+                            <input type="file" id="edit-func-cnh-foto" accept="image/*" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            <button type="button" id="btn-ver-cnh" class="hidden px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" title="Ver foto atual"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </div>
                 </div>
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" onclick="fecharModalEditarFuncionario()" 
@@ -1930,7 +1986,7 @@
                 if (!sb) throw new Error('Supabase indisponível');
                 const { data, error } = await sb
                     .from('funcionarios')
-                    .select('empresa,cadastro,nome,cargo,descricaolocal,frente,turno,lider,admissao')
+                    .select('empresa,cadastro,nome,cargo,descricaolocal,frente,turno,lider,admissao,cnh_numero,cnh_expedicao,cnh_vencimento,cnh_foto_url')
                     .order('cadastro')
                     .limit(1000);
 
@@ -1946,13 +2002,18 @@
                         frente: row.frente || '',
                         turno: row.turno || '',
                         lider: row.lider || '',
-                        admissao: row.admissao
+                        admissao: row.admissao,
+                        cnhNumero: row.cnh_numero || '',
+                        cnhExpedicao: row.cnh_expedicao || null,
+                        cnhVencimento: row.cnh_vencimento || null,
+                        cnhFotoUrl: row.cnh_foto_url || null
                     }));
                     
                     localStorage.setItem('funcionarios', JSON.stringify(funcionarios));
                     funcionariosLoadedFromDB = true;
                     carregarFuncionarios();
                     showMessage('Funcionários atualizados do banco', 'success');
+                    verificarCNHVencidas(); // Verifica alertas de CNH
                     atualizarDashboard();
                 }
             } catch (error) {
@@ -2057,7 +2118,11 @@
                         frente: funcionario.frente,
                         turno: funcionario.turno,
                         lider: funcionario.lider,
-                        admissao: funcionario.admissao
+                        admissao: funcionario.admissao,
+                        cnh_numero: funcionario.cnhNumero || null,
+                        cnh_expedicao: funcionario.cnhExpedicao || null,
+                        cnh_vencimento: funcionario.cnhVencimento || null,
+                        cnh_foto_url: funcionario.cnhFotoUrl || null
                     }, { onConflict: 'cadastro' })
                     .select();
 
@@ -2090,21 +2155,41 @@
         async function salvarFaltaDB(falta) {
             try {
                 if (!sb || !session) return true;
-                const { data, error } = await sb
-                    .from('faltas')
-                    .upsert({
-                        id: falta.id && !isNaN(parseInt(falta.id)) ? parseInt(falta.id) : undefined,
-                        matricula: parseInt(falta.matricula),
-                        nome_funcionario: falta.nomeFuncionario,
-                        data: falta.data,
-                        motivo: falta.motivo,
-                        observacoes: falta.observacoes,
-                        registrado_em: falta.registradoEm,
-                        modificado_em: new Date().toISOString(),
-                        user_id: session ? session.user.id : 'sistema', // Registra quem criou, mas não filtra
-                        dias_atestado: falta.diasAtestado
-                    }, { onConflict: 'id' })
-                    .select();
+                let data, error;
+                try {
+                    ({ data, error } = await sb
+                        .from('faltas')
+                        .upsert({
+                            id: falta.id && !isNaN(parseInt(falta.id)) ? parseInt(falta.id) : undefined,
+                            matricula: parseInt(falta.matricula),
+                            nome_funcionario: falta.nomeFuncionario,
+                            data: falta.data,
+                            motivo: falta.motivo,
+                            observacoes: falta.observacoes,
+                            registrado_em: falta.registradoEm,
+                            modificado_em: new Date().toISOString(),
+                            user_id: session ? session.user.id : 'sistema',
+                            dias_atestado: falta.diasAtestado,
+                            arquivo_atestado_url: falta.arquivoAtestadoUrl || null
+                        }, { onConflict: 'id' })
+                        .select());
+                } catch (e1) {
+                    ({ data, error } = await sb
+                        .from('faltas')
+                        .upsert({
+                            id: falta.id && !isNaN(parseInt(falta.id)) ? parseInt(falta.id) : undefined,
+                            matricula: parseInt(falta.matricula),
+                            nome_funcionario: falta.nomeFuncionario,
+                            data: falta.data,
+                            motivo: falta.motivo,
+                            observacoes: falta.observacoes,
+                            registrado_em: falta.registradoEm,
+                            modificado_em: new Date().toISOString(),
+                            user_id: session ? session.user.id : 'sistema',
+                            dias_atestado: falta.diasAtestado
+                        }, { onConflict: 'id' })
+                        .select());
+                }
 
                 if (error) throw error;
                 
@@ -2700,6 +2785,15 @@
 
             // Calcular datas do atestado na edição
             document.getElementById('edit-duracao-atestado').addEventListener('input', calcularDatasAtestadoEdicao);
+
+            // Preview da foto do atestado
+            const atestadoFile = document.getElementById('atestado-foto');
+            if (atestadoFile) {
+                atestadoFile.addEventListener('change', (e) => {
+                    const file = e.target && e.target.files ? e.target.files[0] : null;
+                    previewAtestadoFoto(file);
+                });
+            }
             document.getElementById('edit-data-inicial-atestado').addEventListener('change', calcularDatasAtestadoEdicao);
             
             // Submit do formulário de falta
@@ -2982,6 +3076,21 @@
             const turno = document.getElementById('func-turno').value;
             const lider = document.getElementById('func-lider').value;
             const admissao = document.getElementById('func-admissao').value;
+            
+            // Dados CNH
+            const cnhNumero = document.getElementById('func-cnh').value;
+            const cnhExpedicao = document.getElementById('func-cnh-expedicao').value;
+            const cnhVencimento = document.getElementById('func-cnh-vencimento').value;
+            const cnhFotoInput = document.getElementById('func-cnh-foto');
+            const cnhFoto = cnhFotoInput && cnhFotoInput.files ? cnhFotoInput.files[0] : null;
+
+            // Validação Motorista
+            if (cargo.toLowerCase().includes('motorista')) {
+                if (!cnhNumero || !cnhExpedicao || !cnhVencimento) {
+                    showMessage('Para motoristas, os dados da CNH são obrigatórios!', 'error');
+                    return;
+                }
+            }
 
             if (funcionarios.find(f => f.cadastro == matricula)) {
                 showMessage('Já existe um funcionário com esta matrícula!', 'error');
@@ -2997,8 +3106,18 @@
                 frente,
                 turno,
                 lider,
-                admissao: admissao || null
+                admissao: admissao || null,
+                cnhNumero: cnhNumero || null,
+                cnhExpedicao: cnhExpedicao || null,
+                cnhVencimento: cnhVencimento || null,
+                cnhFotoUrl: null
             };
+            
+            if (cnhFoto) {
+                // Upload da foto
+                const url = await uploadAtestadoFoto(cnhFoto, matricula, 'cnh');
+                if (url) novoFuncionario.cnhFotoUrl = url;
+            }
 
             const sucessoDB = await salvarFuncionarioDB(novoFuncionario);
             
@@ -3034,6 +3153,19 @@
             
             document.getElementById('edit-func-admissao').value = funcionario.admissao || '';
 
+            // CNH
+            document.getElementById('edit-func-cnh').value = funcionario.cnhNumero || '';
+            document.getElementById('edit-func-cnh-expedicao').value = funcionario.cnhExpedicao || '';
+            document.getElementById('edit-func-cnh-vencimento').value = funcionario.cnhVencimento || '';
+            
+            const btnVerCnh = document.getElementById('btn-ver-cnh');
+            if (funcionario.cnhFotoUrl) {
+                btnVerCnh.classList.remove('hidden');
+                btnVerCnh.onclick = () => window.open(funcionario.cnhFotoUrl, '_blank');
+            } else {
+                btnVerCnh.classList.add('hidden');
+            }
+
             document.getElementById('modal-editar-funcionario').classList.add('active');
         }
 
@@ -3050,6 +3182,20 @@
             const turno = document.getElementById('edit-func-turno').value;
             const lider = document.getElementById('edit-func-lider').value;
             const admissao = document.getElementById('edit-func-admissao').value;
+            
+            // CNH
+            const cnhNumero = document.getElementById('edit-func-cnh').value;
+            const cnhExpedicao = document.getElementById('edit-func-cnh-expedicao').value;
+            const cnhVencimento = document.getElementById('edit-func-cnh-vencimento').value;
+            const cnhFotoInput = document.getElementById('edit-func-cnh-foto');
+            const cnhFoto = cnhFotoInput && cnhFotoInput.files ? cnhFotoInput.files[0] : null;
+
+            if (cargo.toLowerCase().includes('motorista')) {
+                if (!cnhNumero || !cnhExpedicao || !cnhVencimento) {
+                    showMessage('Para motoristas, os dados da CNH são obrigatórios!', 'error');
+                    return;
+                }
+            }
 
             const index = funcionarios.findIndex(f => f.cadastro.toString() === cadastroOriginal);
             if (index !== -1) {
@@ -3064,8 +3210,16 @@
                     frente,
                     turno,
                     lider,
-                    admissao: admissao || null
+                    admissao: admissao || null,
+                    cnhNumero,
+                    cnhExpedicao: cnhExpedicao || null,
+                    cnhVencimento: cnhVencimento || null
                 };
+                
+                if (cnhFoto) {
+                    const url = await uploadAtestadoFoto(cnhFoto, matricula, 'cnh');
+                    if (url) funcionarioAtualizado.cnhFotoUrl = url;
+                }
 
                 const sucessoDB = await salvarFuncionarioDB(funcionarioAtualizado);
                 
@@ -3089,6 +3243,7 @@
                     if (funcionarioOriginal.turno !== turno) alteracoes.push(`Turno: ${funcionarioOriginal.turno || 'N/A'} → ${turno || 'N/A'}`);
                     if (funcionarioOriginal.lider !== lider) alteracoes.push(`Líder: ${funcionarioOriginal.lider || 'N/A'} → ${lider || 'N/A'}`);
                     if (funcionarioOriginal.admissao !== admissao) alteracoes.push(`Admissão: ${formatarDataParaExibicao(funcionarioOriginal.admissao)} → ${formatarDataParaExibicao(admissao)}`);
+                    if (funcionarioOriginal.cnhNumero !== cnhNumero) alteracoes.push(`CNH: ${funcionarioOriginal.cnhNumero || 'N/A'} → ${cnhNumero || 'N/A'}`);
                     
                     if (alteracoes.length > 0) {
                         adicionarRegistroHistorico(
@@ -3181,6 +3336,45 @@
             }
         }
 
+        function previewAtestadoFoto(file) {
+            const box = document.getElementById('atestado-foto-preview');
+            if (!box) return;
+            box.innerHTML = '';
+            if (!file) return;
+            const img = document.createElement('img');
+            img.style.maxHeight = '160px';
+            img.style.borderRadius = '8px';
+            img.style.objectFit = 'contain';
+            const reader = new FileReader();
+            reader.onload = () => { img.src = reader.result; box.appendChild(img); };
+            reader.readAsDataURL(file);
+        }
+
+        async function uploadAtestadoFoto(file, matricula, dataInicial) {
+            try {
+                if (!file) return null;
+                const safeMat = String(matricula || 'sem-matricula');
+                const datePart = String(dataInicial || new Date().toISOString().slice(0,10));
+                const ext = (file.name && file.name.includes('.')) ? file.name.split('.').pop().toLowerCase() : 'jpg';
+                const path = `${safeMat}/${datePart}_${Date.now()}.${ext}`;
+                if (sb && sb.storage) {
+                    const { data, error } = await sb.storage.from('atestados').upload(path, file, { upsert: true, contentType: file.type || 'image/jpeg' });
+                    if (error) throw error;
+                    const { data: pub } = await sb.storage.from('atestados').getPublicUrl(data.path);
+                    return pub && pub.publicUrl ? pub.publicUrl : data.path;
+                } else {
+                    return new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result);
+                        reader.readAsDataURL(file);
+                    });
+                }
+            } catch (error) {
+                showMessage('Falha ao enviar foto do atestado: ' + (error && error.message ? error.message : String(error)), 'error');
+                return null;
+            }
+        }
+
         function calcularDatasAtestadoEdicao() {
             const dataInicial = document.getElementById('edit-data-inicial-atestado').value;
             const duracao = parseInt(document.getElementById('edit-duracao-atestado').value);
@@ -3216,8 +3410,13 @@
             if (isPeriodoMotivo(motivo)) {
                 const dataInicialAtestado = document.getElementById('data-inicial-atestado').value;
                 let duracaoAtestado = parseInt(document.getElementById('duracao-atestado').value);
-
                 const motivoNorm = normalizarMotivo(motivo);
+                if (motivoNorm === 'atestado-medico') {
+                    const fileInput = document.getElementById('atestado-foto');
+                    const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+                    if (!file) { showMessage('Foto do atestado é obrigatória', 'error'); return; }
+                }
+
                 if (!dataInicialAtestado || (motivoNorm !== 'ferias' && (!duracaoAtestado || duracaoAtestado <= 0))) {
                     showMessage('Para período, informe data inicial e duração válidas!', 'error');
                     return;
@@ -3256,6 +3455,13 @@
                         cancelarEdicao();
                     } else { showMessage('Não foi possível registrar as férias.', 'error'); }
                 } else {
+                    let fotoUrl = null;
+                    if (normalizarMotivo(motivo) === 'atestado-medico') {
+                        const fileInput = document.getElementById('atestado-foto');
+                        const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+                        fotoUrl = await uploadAtestadoFoto(file, matricula, dataInicialAtestado);
+                        if (!fotoUrl) { showMessage('Falha ao processar a foto do atestado', 'error'); return; }
+                    }
                     const datasAtestado = gerarDatasPeriodo(dataInicialAtestado, duracaoAtestado);
                     const faltasExistentes = faltas.filter(f => f.matricula === matricula && datasAtestado.includes(f.data));
                     if (faltasExistentes.length > 0) { showMessage(`Já existem registros para ${faltasExistentes.length} dia(s) deste período!`, 'error'); return; }
@@ -3266,7 +3472,8 @@
                         motivo,
                         observacoes: observacoes + ` (${getPeriodoLabel(motivo)}: ${formatarDataParaExibicao(dataInicialAtestado)} a ${formatarDataParaExibicao(datasAtestado[datasAtestado.length - 1])})`,
                         registradoEm: new Date().toISOString(),
-                        diasAtestado: duracaoAtestado
+                        diasAtestado: duracaoAtestado,
+                        arquivoAtestadoUrl: fotoUrl || null
                     }));
                     if (!session) { novasFaltas.forEach(f => { f.id = gerarIdLocal(); }); }
                     const sucessoDB = session ? await salvarFaltasDBLote(novasFaltas) : true;
@@ -3863,6 +4070,96 @@
                 });
                 if (lideres.includes(current)) liderSelect.value = current;
             }
+        }
+
+        function verificarCNHVencidas() {
+            if (!funcionarios || funcionarios.length === 0) return;
+
+            const motoristas = funcionarios.filter(f => f.cargo && f.cargo.toLowerCase().includes('motorista'));
+            const hoje = new Date();
+            const trintaDiasDepois = new Date();
+            trintaDiasDepois.setDate(hoje.getDate() + 30);
+
+            const alertas = [];
+
+            motoristas.forEach(m => {
+                if (!m.cnhNumero || !m.cnhVencimento) {
+                    alertas.push({
+                        tipo: 'pendencia',
+                        msg: `${m.nome}: Dados da CNH incompletos.`
+                    });
+                } else {
+                    const vencimento = new Date(m.cnhVencimento);
+                    // Reset time part for accurate date comparison
+                    vencimento.setHours(0, 0, 0, 0);
+                    hoje.setHours(0, 0, 0, 0);
+                    
+                    if (vencimento < hoje) {
+                        alertas.push({
+                            tipo: 'vencida',
+                            msg: `${m.nome}: CNH vencida em ${m.cnhVencimento.split('-').reverse().join('/')}.`
+                        });
+                    } else if (vencimento <= trintaDiasDepois) {
+                        alertas.push({
+                            tipo: 'vencendo',
+                            msg: `${m.nome}: CNH vence em ${m.cnhVencimento.split('-').reverse().join('/')}.`
+                        });
+                    }
+                }
+            });
+
+            if (alertas.length > 0) {
+                mostrarAlertaCNH(alertas);
+            }
+        }
+
+        function mostrarAlertaCNH(alertas) {
+            // Remove existing alert if any
+            const existing = document.getElementById('alerta-cnh-container');
+            if (existing) existing.remove();
+
+            const container = document.createElement('div');
+            container.id = 'alerta-cnh-container';
+            container.className = 'fixed top-20 right-4 z-50 w-96 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-yellow-400 p-4 animate-slide-in';
+            
+            let html = `
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="font-bold text-yellow-600 dark:text-yellow-400 flex items-center gap-2">
+                        <i class="fas fa-exclamation-triangle"></i> Alertas de CNH
+                    </h3>
+                    <button onclick="this.closest('#alerta-cnh-container').remove()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+            `;
+
+            alertas.forEach(a => {
+                let colorClass = 'text-gray-700 dark:text-gray-300';
+                let icon = 'fa-info-circle';
+                
+                if (a.tipo === 'vencida') {
+                    colorClass = 'text-red-600 dark:text-red-400 font-semibold';
+                    icon = 'fa-times-circle';
+                } else if (a.tipo === 'vencendo') {
+                    colorClass = 'text-yellow-600 dark:text-yellow-400';
+                    icon = 'fa-clock';
+                } else {
+                    colorClass = 'text-orange-500 dark:text-orange-400';
+                    icon = 'fa-clipboard-list';
+                }
+
+                html += `
+                    <div class="flex items-start gap-2 text-sm p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                        <i class="fas ${icon} mt-1 ${colorClass}"></i>
+                        <span class="${colorClass}">${a.msg}</span>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+            document.body.appendChild(container);
         }
 
         function atualizarDashboard() {
@@ -5190,7 +5487,7 @@
         async function salvarFaltasDBLote(lista) {
             if (!session) return true;
 
-            const rows = lista.map(f => ({
+            let rows = lista.map(f => ({
                 matricula: parseInt(f.matricula),
                 nome_funcionario: f.nomeFuncionario,
                 data: f.data,
@@ -5199,10 +5496,17 @@
                 registrado_em: f.registradoEm,
                 modificado_em: new Date().toISOString(),
                 user_id: session.user.id,
-                dias_atestado: f.diasAtestado
+                dias_atestado: f.diasAtestado,
+                arquivo_atestado_url: f.arquivoAtestadoUrl || null
             }));
 
-            const { data, error } = await sb.from('faltas').insert(rows).select('id,matricula,data');
+            let data, error;
+            try {
+                ({ data, error } = await sb.from('faltas').insert(rows).select('id,matricula,data'));
+            } catch (e1) {
+                rows = rows.map(r => { const { arquivo_atestado_url, ...rest } = r; return rest; });
+                ({ data, error } = await sb.from('faltas').insert(rows).select('id,matricula,data'));
+            }
             if (error) throw error;
 
             // Garante que os itens locais tenham id para permitir exclusão/edição posteriores
