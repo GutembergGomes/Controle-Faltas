@@ -4080,11 +4080,12 @@
             const trintaDiasDepois = new Date();
             trintaDiasDepois.setDate(hoje.getDate() + 30);
 
-            const alertas = [];
+            const alertasNormais = [];
+            const alertasCriticos = []; // CNHs vencidas
 
             motoristas.forEach(m => {
                 if (!m.cnhNumero || !m.cnhVencimento) {
-                    alertas.push({
+                    alertasNormais.push({
                         tipo: 'pendencia',
                         msg: `${m.nome}: Dados da CNH incompletos.`
                     });
@@ -4095,12 +4096,19 @@
                     hoje.setHours(0, 0, 0, 0);
                     
                     if (vencimento < hoje) {
-                        alertas.push({
+                        // Vencida: alerta crítico (modal)
+                        alertasCriticos.push({
+                            nome: m.nome,
+                            vencimento: m.cnhVencimento.split('-').reverse().join('/')
+                        });
+
+                        // Também mantém no alerta lateral para referência
+                        alertasNormais.push({
                             tipo: 'vencida',
                             msg: `${m.nome}: CNH vencida em ${m.cnhVencimento.split('-').reverse().join('/')}.`
                         });
                     } else if (vencimento <= trintaDiasDepois) {
-                        alertas.push({
+                        alertasNormais.push({
                             tipo: 'vencendo',
                             msg: `${m.nome}: CNH vence em ${m.cnhVencimento.split('-').reverse().join('/')}.`
                         });
@@ -4108,9 +4116,65 @@
                 }
             });
 
-            if (alertas.length > 0) {
-                mostrarAlertaCNH(alertas);
+            if (alertasCriticos.length > 0) {
+                mostrarModalCNHVencida(alertasCriticos);
             }
+
+            if (alertasNormais.length > 0) {
+                mostrarAlertaCNH(alertasNormais);
+            }
+        }
+
+        function mostrarModalCNHVencida(vencidos) {
+            // Remove existing modal if any
+            const existing = document.getElementById('modal-cnh-vencida');
+            if (existing) existing.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'modal-cnh-vencida';
+            modal.className = 'fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm animate-fade-in';
+            
+            let html = `
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-lg p-6 m-4 border-2 border-red-500 animate-scale-in relative">
+                    <button onclick="document.getElementById('modal-cnh-vencida').remove()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                    
+                    <div class="text-center mb-6">
+                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900 mb-4">
+                            <i class="fas fa-exclamation-triangle text-3xl text-red-600 dark:text-red-400"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-red-600 dark:text-red-400">ATENÇÃO: CNH VENCIDA</h2>
+                        <p class="text-gray-600 dark:text-gray-300 mt-2">Os seguintes motoristas estão com a CNH vencida:</p>
+                    </div>
+
+                    <div class="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 max-h-60 overflow-y-auto custom-scrollbar border border-red-100 dark:border-red-800">
+                        <ul class="space-y-3">
+            `;
+
+            vencidos.forEach(v => {
+                html += `
+                    <li class="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded shadow-sm border-l-4 border-red-500">
+                        <span class="font-semibold text-gray-800 dark:text-gray-200">${v.nome}</span>
+                        <span class="text-red-600 dark:text-red-400 font-bold text-sm">Venceu: ${v.vencimento}</span>
+                    </li>
+                `;
+            });
+
+            html += `
+                        </ul>
+                    </div>
+
+                    <div class="mt-6 text-center">
+                        <button onclick="document.getElementById('modal-cnh-vencida').remove()" class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors">
+                            Entendido
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            modal.innerHTML = html;
+            document.body.appendChild(modal);
         }
 
         function mostrarAlertaCNH(alertas) {
