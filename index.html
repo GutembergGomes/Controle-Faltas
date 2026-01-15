@@ -3361,10 +3361,25 @@
                 const ext = (file.name && file.name.includes('.')) ? file.name.split('.').pop().toLowerCase() : 'jpg';
                 const path = `${safeMat}/${datePart}_${Date.now()}.${ext}`;
                 if (sb && sb.storage) {
-                    const { data, error } = await sb.storage.from('atestados').upload(path, file, { upsert: true, contentType: file.type || 'image/jpeg' });
+                    const { data, error } = await sb.storage
+                        .from('atestados')
+                        .upload(path, file, { upsert: true, contentType: file.type || 'image/jpeg' });
                     if (error) throw error;
-                    const { data: pub } = await sb.storage.from('atestados').getPublicUrl(data.path);
-                    return pub && pub.publicUrl ? pub.publicUrl : data.path;
+
+                    let publicUrl = null;
+                    try {
+                        const { data: pub } = await sb.storage.from('atestados').getPublicUrl(path);
+                        if (pub) {
+                            if (typeof pub.publicUrl === 'string') {
+                                publicUrl = pub.publicUrl;
+                            } else if (typeof pub.publicURL === 'string') {
+                                publicUrl = pub.publicURL;
+                            }
+                        }
+                    } catch (e) {
+                    }
+
+                    return publicUrl || path;
                 } else {
                     return new Promise((resolve) => {
                         const reader = new FileReader();
