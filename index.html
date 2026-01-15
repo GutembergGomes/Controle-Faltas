@@ -2040,7 +2040,7 @@
             try {
                 const { data, error } = await sb
                     .from('faltas')
-                    .select('id,matricula,nome_funcionario,data,motivo,observacoes,registrado_em,modificado_em,dias_atestado,user_id')
+                    .select('id,matricula,nome_funcionario,data,motivo,observacoes,registrado_em,modificado_em,dias_atestado,user_id,arquivo_atestado_url')
                     .order('data', { ascending: false })
                     .limit(1000);
 
@@ -2057,7 +2057,8 @@
                         registradoEm: row.registrado_em,
                         modificadoEm: row.modificado_em || null,
                         diasAtestado: row.dias_atestado || null,
-                        userId: row.user_id // Mantém para referência, mas não filtra
+                        arquivoAtestadoUrl: row.arquivo_atestado_url || null,
+                        userId: row.user_id
                     }));
                     
                     localStorage.setItem('faltas', JSON.stringify(faltas));
@@ -3356,37 +3357,11 @@
         async function uploadAtestadoFoto(file, matricula, dataInicial) {
             try {
                 if (!file) return null;
-                const safeMat = String(matricula || 'sem-matricula');
-                const datePart = String(dataInicial || new Date().toISOString().slice(0,10));
-                const ext = (file.name && file.name.includes('.')) ? file.name.split('.').pop().toLowerCase() : 'jpg';
-                const path = `${safeMat}/${datePart}_${Date.now()}.${ext}`;
-                if (sb && sb.storage) {
-                    const { data, error } = await sb.storage
-                        .from('atestados')
-                        .upload(path, file, { upsert: true, contentType: file.type || 'image/jpeg' });
-                    if (error) throw error;
-
-                    let publicUrl = null;
-                    try {
-                        const { data: pub } = await sb.storage.from('atestados').getPublicUrl(path);
-                        if (pub) {
-                            if (typeof pub.publicUrl === 'string') {
-                                publicUrl = pub.publicUrl;
-                            } else if (typeof pub.publicURL === 'string') {
-                                publicUrl = pub.publicURL;
-                            }
-                        }
-                    } catch (e) {
-                    }
-
-                    return publicUrl || path;
-                } else {
-                    return new Promise((resolve) => {
-                        const reader = new FileReader();
-                        reader.onload = () => resolve(reader.result);
-                        reader.readAsDataURL(file);
-                    });
-                }
+                return await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.readAsDataURL(file);
+                });
             } catch (error) {
                 showMessage('Falha ao enviar foto do atestado: ' + (error && error.message ? error.message : String(error)), 'error');
                 return null;
