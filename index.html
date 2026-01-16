@@ -160,6 +160,22 @@
                     <i class="fas fa-shield-alt mr-2"></i>Admin
                 </button>
             </div>
+            <div class="flex flex-col md:flex-row items-center justify-between px-4 py-3 gap-3">
+                <div class="text-sm text-gray-600 dark:text-gray-300">
+                    Busca rápida de funcionário (nome ou matrícula)
+                </div>
+                <div class="flex items-center gap-2 w-full md:w-auto">
+                    <input id="global-search-func" 
+                           type="text" 
+                           placeholder="Digite nome ou matrícula..." 
+                           class="flex-1 md:flex-none px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#5D5CDE] focus:border-transparent dark:bg-gray-700 dark:text-white text-sm w-full md:w-64">
+                    <button id="btn-global-search"
+                            type="button"
+                            class="px-4 py-2 bg-[#5D5CDE] text-white rounded-lg text-sm hover:bg-[#4A4BC9] transition">
+                        <i class="fas fa-search mr-1"></i>Buscar
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Tab Contents -->
@@ -232,6 +248,44 @@
                                 <div class="text-2xl font-bold text-yellow-900 dark:text-yellow-300" id="dashboard-atestados">0</div>
                             </div>
                             <i class="fas fa-file-medical text-yellow-500 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Painel de Alertas de Risco -->
+                <div class="mb-8" id="painel-alertas">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <i class="fas fa-exclamation-triangle text-orange-500"></i> Alertas de Risco Diário
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Alerta de Faltas Excessivas -->
+                        <div class="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                            <h4 class="text-red-700 dark:text-red-400 font-semibold mb-3 flex items-center gap-2">
+                                <i class="fas fa-user-times"></i> Faltas Excessivas (>3/mês)
+                            </h4>
+                            <div id="lista-alertas-faltas" class="space-y-2 max-h-48 overflow-y-auto pr-2 text-sm">
+                                <p class="text-gray-500 dark:text-gray-400 italic">Nenhum alerta.</p>
+                            </div>
+                        </div>
+
+                        <!-- Alerta de CNH -->
+                        <div class="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+                            <h4 class="text-orange-700 dark:text-orange-400 font-semibold mb-3 flex items-center gap-2">
+                                <i class="fas fa-id-card"></i> CNH Vencendo/Vencida
+                            </h4>
+                            <div id="lista-alertas-cnh" class="space-y-2 max-h-48 overflow-y-auto pr-2 text-sm">
+                                <p class="text-gray-500 dark:text-gray-400 italic">Nenhum alerta.</p>
+                            </div>
+                        </div>
+
+                        <!-- Alerta de Atestados Longos -->
+                        <div class="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                            <h4 class="text-yellow-700 dark:text-yellow-400 font-semibold mb-3 flex items-center gap-2">
+                                <i class="fas fa-hospital-user"></i> Atestados Prolongados (>15 dias)
+                            </h4>
+                            <div id="lista-alertas-atestados" class="space-y-2 max-h-48 overflow-y-auto pr-2 text-sm">
+                                <p class="text-gray-500 dark:text-gray-400 italic">Nenhum alerta.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -649,6 +703,7 @@
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Data</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Motivo</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Observações</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Atestado</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Registrado em</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ações</th>
                                 </tr>
@@ -1291,6 +1346,44 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div id="modal-historico-funcionario" class="modal">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-3xl w-full mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Histórico do Funcionário</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300">
+                        <span id="hist-func-nome" class="font-medium"></span>
+                        <span class="mx-1 text-gray-400">•</span>
+                        Matrícula <span id="hist-func-matricula" class="font-mono"></span>
+                    </p>
+                    <p id="hist-func-cargo" class="text-xs text-gray-500 dark:text-gray-400 mt-1"></p>
+                </div>
+                <button type="button" onclick="fecharModalHistoricoFuncionario()"
+                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Data/Hora</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Tipo</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Descrição</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Usuário</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Detalhes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historico-funcionario-lista" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    </tbody>
+                </table>
+                <div id="historico-funcionario-vazio" class="p-6 text-center text-sm text-gray-500 dark:text-gray-400 hidden">
+                    Nenhum registro de histórico para este funcionário.
+                </div>
+            </div>
         </div>
     </div>
 
@@ -2835,6 +2928,19 @@
                     applyTheme(isDark ? 'light' : 'dark');
                 });
             }
+            const globalSearchInput = document.getElementById('global-search-func');
+            const globalSearchBtn = document.getElementById('btn-global-search');
+            if (globalSearchInput) {
+                globalSearchInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        buscarFuncionarioGlobal();
+                    }
+                });
+            }
+            if (globalSearchBtn) {
+                globalSearchBtn.addEventListener('click', buscarFuncionarioGlobal);
+            }
         }
 
         // ===== FUNÇÕES DE NAVEGAÇÃO =====
@@ -2995,6 +3101,11 @@
                                     class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" 
                                     title="Ver faltas">
                                 <i class="fas fa-eye"></i>
+                            </button>
+                            <button onclick="abrirHistoricoFuncionario('${func.cadastro}')"
+                                    class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-200"
+                                    title="Histórico">
+                                <i class="fas fa-history"></i>
                             </button>
                             <button onclick="editarFuncionario('${func.cadastro}')" 
                                     class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300" 
@@ -3320,6 +3431,38 @@
             }
         }
 
+        function buscarFuncionarioGlobal() {
+            const input = document.getElementById('global-search-func');
+            if (!input) return;
+            const termoRaw = input.value.trim();
+            if (!termoRaw) {
+                showMessage('Digite nome ou matrícula para buscar o funcionário.', 'error');
+                return;
+            }
+            const termo = termoRaw.toLowerCase();
+            
+            let funcionario = null;
+            if (/^\d+$/.test(termoRaw)) {
+                funcionario = funcionarios.find(f => f.cadastro.toString() === termoRaw);
+            }
+            if (!funcionario) {
+                funcionario = funcionarios.find(f => (f.nome || '').toLowerCase().includes(termo));
+            }
+            if (!funcionario) {
+                showMessage('Funcionário não encontrado na lista carregada.', 'error');
+                return;
+            }
+            
+            const campoConsulta = document.getElementById('consulta-matricula');
+            if (campoConsulta) {
+                campoConsulta.value = funcionario.cadastro.toString();
+            }
+            showTab('consulta');
+            if (typeof consultarFaltas === 'function') {
+                consultarFaltas();
+            }
+        }
+
         function calcularDatasAtestado() {
             const dataInicial = document.getElementById('data-inicial-atestado').value;
             const duracao = parseInt(document.getElementById('duracao-atestado').value);
@@ -3399,6 +3542,19 @@
                 
                 const funcionario = funcionarios.find(f => f.cadastro.toString() === matricula);
                 const nomeFunc = funcionario ? funcionario.nome : (document.getElementById('nome-funcionario').value || '-');
+
+                if (!matricula || !motivo) {
+                    showMessage('Informe matrícula e motivo da falta.', 'error');
+                    return;
+                }
+                if (!data && !isPeriodoMotivo(motivo)) {
+                    showMessage('Informe a data da falta.', 'error');
+                    return;
+                }
+                if (!funcionario) {
+                    showMessage('Funcionário não encontrado para a matrícula informada.', 'error');
+                    return;
+                }
 
             if (isPeriodoMotivo(motivo)) {
                 const dataInicialAtestado = document.getElementById('data-inicial-atestado').value;
@@ -3668,6 +3824,15 @@
                     <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">${dataFormatada}</td>
                     <td class="px-4 py-3 text-sm ${motivoClass}">${getMotivoLabel(falta.motivo)}</td>
                     <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">${falta.observacoes || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-center">
+                        ${falta.arquivoAtestadoUrl ? `
+                            <button onclick="verAtestadoFalta('${falta.id}')" 
+                                    class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-200" 
+                                    title="Ver atestado">
+                                <i class="fas fa-file-image"></i>
+                            </button>
+                        ` : '-'}
+                    </td>
                     <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${registroFormatado}</td>
                     <td class="px-4 py-3 text-sm">
                         <div class="flex gap-2">
@@ -3686,6 +3851,26 @@
                 `;
                 tbody.appendChild(row);
             });
+        }
+
+        function verAtestadoFalta(id) {
+            const falta = faltas.find(f => f.id && f.id.toString() === id.toString());
+            if (!falta || !falta.arquivoAtestadoUrl) {
+                showMessage('Esta falta não possui atestado anexado.', 'error');
+                return;
+            }
+            const win = window.open();
+            if (!win) return;
+            win.document.write(`
+                <html>
+                    <head>
+                        <title>Atestado</title>
+                    </head>
+                    <body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;">
+                        <img src="${falta.arquivoAtestadoUrl}" style="max-width:100%;max-height:100%;object-fit:contain;"/>
+                    </body>
+                </html>
+            `);
         }
 
         function filtrarFaltas() {
@@ -3997,6 +4182,89 @@
             document.getElementById('modal-editar-funcionario').classList.remove('active');
         }
 
+        function fecharModalHistoricoFuncionario() {
+            document.getElementById('modal-historico-funcionario').classList.remove('active');
+        }
+
+        async function abrirHistoricoFuncionario(cadastro) {
+            const modal = document.getElementById('modal-historico-funcionario');
+            if (!modal) return;
+
+            if (session && sb && !historicoLoadedFromDB) {
+                try {
+                    await carregarHistoricoDB();
+                } catch (e) {}
+            }
+
+            const funcionario = funcionarios.find(f => f.cadastro.toString() === cadastro);
+            if (!funcionario) return;
+
+            const nomeEl = document.getElementById('hist-func-nome');
+            const matEl = document.getElementById('hist-func-matricula');
+            const cargoEl = document.getElementById('hist-func-cargo');
+            if (nomeEl) nomeEl.textContent = funcionario.nome;
+            if (matEl) matEl.textContent = funcionario.cadastro;
+            if (cargoEl) cargoEl.textContent = `${funcionario.cargo} - ${funcionario.descricaoLocal || ''}`;
+
+            const listaEl = document.getElementById('historico-funcionario-lista');
+            const vazioEl = document.getElementById('historico-funcionario-vazio');
+            if (!listaEl || !vazioEl) return;
+
+            listaEl.innerHTML = '';
+
+            const termoMatricula = `matrícula: ${cadastro}`.toLowerCase();
+            const nomeLower = (funcionario.nome || '').toLowerCase();
+
+            const registros = historico
+                .filter(item => {
+                    const desc = (item.descricao || '').toLowerCase();
+                    const det = (item.detalhes || '').toLowerCase();
+                    if (!desc && !det) return false;
+                    if (desc.includes(nomeLower) || det.includes(nomeLower)) return true;
+                    if (desc.includes(termoMatricula) || det.includes(termoMatricula)) return true;
+                    return false;
+                })
+                .sort((a, b) => new Date(b.dataHora || b.data_hora || 0) - new Date(a.dataHora || a.data_hora || 0));
+
+            if (registros.length === 0) {
+                vazioEl.classList.remove('hidden');
+                modal.classList.add('active');
+                return;
+            }
+
+            vazioEl.classList.add('hidden');
+
+            registros.forEach(item => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700';
+
+                const dataStr = item.dataHora || item.data_hora || '';
+                const dataFormatada = dataStr ? new Date(dataStr).toLocaleString('pt-BR') : '-';
+
+                let tipoBadge = '';
+                if (item.tipo === 'funcionario') {
+                    tipoBadge = '<span class="badge bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">Funcionário</span>';
+                } else if (item.tipo === 'falta') {
+                    tipoBadge = '<span class="badge bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">Falta</span>';
+                } else if (item.tipo === 'sistema') {
+                    tipoBadge = '<span class="badge bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">Sistema</span>';
+                } else {
+                    tipoBadge = '<span class="badge bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">Outro</span>';
+                }
+
+                row.innerHTML = `
+                    <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">${dataFormatada}</td>
+                    <td class="px-4 py-3 text-sm">${tipoBadge}</td>
+                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-white">${item.descricao || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">${item.usuario || '-'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">${item.detalhes || '-'}</td>
+                `;
+                listaEl.appendChild(row);
+            });
+
+            modal.classList.add('active');
+        }
+
         function fecharModalEditar() {
             document.getElementById('modal-editar').classList.remove('active');
             document.getElementById('form-editar-falta').reset();
@@ -4219,7 +4487,121 @@
             document.body.appendChild(container);
         }
 
+        function atualizarPainelAlertas() {
+            const agora = new Date();
+            const ano = agora.getFullYear();
+            const mes = agora.getMonth();
+            
+            // 1. Faltas Excessivas (>3/mês atual - Injustificadas)
+            const faltasDoMes = faltas.filter(f => {
+                const d = new Date(f.data + 'T12:00:00');
+                return d.getMonth() === mes && d.getFullYear() === ano && f.motivo === 'falta-injustificada';
+            });
+            
+            const contagemFaltas = {};
+            faltasDoMes.forEach(f => {
+                contagemFaltas[f.matricula] = (contagemFaltas[f.matricula] || 0) + 1;
+            });
+            
+            const containerFaltas = document.getElementById('lista-alertas-faltas');
+            if (containerFaltas) {
+                containerFaltas.innerHTML = '';
+                let hasFaltas = false;
+                Object.entries(contagemFaltas).forEach(([matricula, qtd]) => {
+                    if (qtd > 3) {
+                        const func = funcionarios.find(f => f.cadastro.toString() === matricula);
+                        if (func) {
+                            hasFaltas = true;
+                            containerFaltas.innerHTML += `
+                                <div class="flex items-center justify-between p-2 bg-red-100 dark:bg-red-900/30 rounded border-l-4 border-red-500 mb-1">
+                                    <span class="font-medium text-red-800 dark:text-red-300 truncate max-w-[150px]" title="${func.nome}">${func.nome}</span>
+                                    <span class="font-bold text-red-600 dark:text-red-400 text-sm whitespace-nowrap">${qtd} faltas</span>
+                                </div>
+                            `;
+                        }
+                    }
+                });
+                if (!hasFaltas) containerFaltas.innerHTML = '<p class="text-gray-500 dark:text-gray-400 italic">Nenhum alerta.</p>';
+            }
+
+            // 2. CNH Vencendo/Vencida
+            const containerCNH = document.getElementById('lista-alertas-cnh');
+            if (containerCNH) {
+                containerCNH.innerHTML = '';
+                let hasCNH = false;
+                const motoristas = funcionarios.filter(f => f.cargo && f.cargo.toLowerCase().includes('motorista'));
+                
+                motoristas.forEach(m => {
+                    if (m.cnhVencimento) {
+                        const vencimento = new Date(m.cnhVencimento);
+                        vencimento.setHours(0,0,0,0);
+                        const hojeZero = new Date();
+                        hojeZero.setHours(0,0,0,0);
+                        const trintaDias = new Date(hojeZero);
+                        trintaDias.setDate(trintaDias.getDate() + 30);
+                        
+                        if (vencimento < hojeZero) { // Vencida
+                            hasCNH = true;
+                            containerCNH.innerHTML += `
+                                <div class="flex items-center justify-between p-2 bg-red-100 dark:bg-red-900/30 rounded border-l-4 border-red-500 mb-1">
+                                    <span class="font-medium text-red-800 dark:text-red-300 truncate max-w-[150px]" title="${m.nome}">${m.nome}</span>
+                                    <span class="text-xs font-bold text-red-600 dark:text-red-400 whitespace-nowrap">Vencida: ${m.cnhVencimento.split('-').reverse().join('/')}</span>
+                                </div>
+                            `;
+                        } else if (vencimento <= trintaDias) { // Vencendo
+                            hasCNH = true;
+                            containerCNH.innerHTML += `
+                                <div class="flex items-center justify-between p-2 bg-orange-100 dark:bg-orange-900/30 rounded border-l-4 border-orange-500 mb-1">
+                                    <span class="font-medium text-orange-800 dark:text-orange-300 truncate max-w-[150px]" title="${m.nome}">${m.nome}</span>
+                                    <span class="text-xs font-bold text-orange-600 dark:text-orange-400 whitespace-nowrap">Vence: ${m.cnhVencimento.split('-').reverse().join('/')}</span>
+                                </div>
+                            `;
+                        }
+                    }
+                });
+                if (!hasCNH) containerCNH.innerHTML = '<p class="text-gray-500 dark:text-gray-400 italic">Nenhum alerta.</p>';
+            }
+
+            // 3. Atestados Prolongados (>15 dias no total - últimos 60 dias)
+            const sessentaDiasAtras = new Date(agora);
+            sessentaDiasAtras.setDate(sessentaDiasAtras.getDate() - 60);
+            
+            const atestadosRecentes = faltas.filter(f => {
+                const d = new Date(f.data + 'T12:00:00');
+                return d >= sessentaDiasAtras && (f.motivo === 'atestado-medico' || f.motivo === 'licenca-medica');
+            });
+
+            const contagemAtestados = {};
+            atestadosRecentes.forEach(f => {
+                contagemAtestados[f.matricula] = (contagemAtestados[f.matricula] || 0) + 1;
+            });
+
+            const containerAtestados = document.getElementById('lista-alertas-atestados');
+            if (containerAtestados) {
+                containerAtestados.innerHTML = '';
+                let hasAtestados = false;
+                Object.entries(contagemAtestados).forEach(([matricula, qtd]) => {
+                    if (qtd > 15) {
+                        const func = funcionarios.find(f => f.cadastro.toString() === matricula);
+                        if (func) {
+                            hasAtestados = true;
+                            containerAtestados.innerHTML += `
+                                <div class="flex items-center justify-between p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded border-l-4 border-yellow-500 mb-1">
+                                    <span class="font-medium text-yellow-800 dark:text-yellow-300 truncate max-w-[150px]" title="${func.nome}">${func.nome}</span>
+                                    <span class="font-bold text-yellow-600 dark:text-yellow-400 text-sm whitespace-nowrap">${qtd} dias (60d)</span>
+                                </div>
+                            `;
+                        }
+                    }
+                });
+                if (!hasAtestados) containerAtestados.innerHTML = '<p class="text-gray-500 dark:text-gray-400 italic">Nenhum alerta.</p>';
+            }
+        }
+
         function atualizarDashboard() {
+            // Atualiza o painel de alertas de risco sempre que o dashboard for atualizado
+            atualizarPainelAlertas();
+
             const periodo = document.getElementById('filtro-periodo-dashboard').value;
             const frente = document.getElementById('filtro-frente-dashboard')?.value || 'todas';
             const lider = document.getElementById('filtro-lider-dashboard')?.value || 'todos';
