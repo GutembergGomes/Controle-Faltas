@@ -4420,7 +4420,8 @@
 
             vencidos.forEach(v => {
                 html += `
-                    <li class="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded shadow-sm border-l-4 border-red-500">
+                    <li onclick="document.getElementById('modal-cnh-vencida').remove(); editarFuncionario('${v.cadastro}')"
+                        class="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded shadow-sm border-l-4 border-red-500 cursor-pointer hover:bg-red-50 dark:hover:bg-gray-700">
                         <span class="font-semibold text-gray-800 dark:text-gray-200">${v.nome}</span>
                         <span class="text-red-600 dark:text-red-400 font-bold text-sm">Venceu: ${v.vencimento}</span>
                     </li>
