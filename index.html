@@ -3251,6 +3251,7 @@
         }
 
         function editarFuncionario(cadastro) {
+            showTab('funcionarios');
             const funcionario = funcionarios.find(f => f.cadastro.toString() === cadastro);
             if (!funcionario) return;
 
@@ -4348,7 +4349,8 @@
                 if (!m.cnhNumero || !m.cnhVencimento) {
                     alertasNormais.push({
                         tipo: 'pendencia',
-                        msg: `${m.nome}: Dados da CNH incompletos.`
+                        msg: `${m.nome}: Dados da CNH incompletos.`,
+                        cadastro: m.cadastro
                     });
                 } else {
                     const vencimento = new Date(m.cnhVencimento);
@@ -4360,18 +4362,21 @@
                         // Vencida: alerta crítico (modal)
                         alertasCriticos.push({
                             nome: m.nome,
-                            vencimento: m.cnhVencimento.split('-').reverse().join('/')
+                            vencimento: m.cnhVencimento.split('-').reverse().join('/'),
+                            cadastro: m.cadastro
                         });
 
                         // Também mantém no alerta lateral para referência
                         alertasNormais.push({
                             tipo: 'vencida',
-                            msg: `${m.nome}: CNH vencida em ${m.cnhVencimento.split('-').reverse().join('/')}.`
+                            msg: `${m.nome}: CNH vencida em ${m.cnhVencimento.split('-').reverse().join('/')}.`,
+                            cadastro: m.cadastro
                         });
                     } else if (vencimento <= trintaDiasDepois) {
                         alertasNormais.push({
                             tipo: 'vencendo',
-                            msg: `${m.nome}: CNH vence em ${m.cnhVencimento.split('-').reverse().join('/')}.`
+                            msg: `${m.nome}: CNH vence em ${m.cnhVencimento.split('-').reverse().join('/')}.`,
+                            cadastro: m.cadastro
                         });
                     }
                 }
@@ -4474,8 +4479,10 @@
                     icon = 'fa-clipboard-list';
                 }
 
+                const onClick = a.cadastro ? `onclick="editarFuncionario('${a.cadastro}')"` : '';
+
                 html += `
-                    <div class="flex items-start gap-2 text-sm p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                    <div ${onClick} class="flex items-start gap-2 text-sm p-2 bg-gray-50 dark:bg-gray-700 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600">
                         <i class="fas ${icon} mt-1 ${colorClass}"></i>
                         <span class="${colorClass}">${a.msg}</span>
                     </div>
@@ -4540,18 +4547,18 @@
                         const trintaDias = new Date(hojeZero);
                         trintaDias.setDate(trintaDias.getDate() + 30);
                         
-                        if (vencimento < hojeZero) { // Vencida
+                        if (vencimento < hojeZero) {
                             hasCNH = true;
                             containerCNH.innerHTML += `
-                                <div class="flex items-center justify-between p-2 bg-red-100 dark:bg-red-900/30 rounded border-l-4 border-red-500 mb-1">
+                                <div onclick="editarFuncionario('${m.cadastro}')" class="flex items-center justify-between p-2 bg-red-100 dark:bg-red-900/30 rounded border-l-4 border-red-500 mb-1 cursor-pointer hover:bg-red-200 dark:hover:bg-red-900/50">
                                     <span class="font-medium text-red-800 dark:text-red-300 truncate max-w-[150px]" title="${m.nome}">${m.nome}</span>
                                     <span class="text-xs font-bold text-red-600 dark:text-red-400 whitespace-nowrap">Vencida: ${m.cnhVencimento.split('-').reverse().join('/')}</span>
                                 </div>
                             `;
-                        } else if (vencimento <= trintaDias) { // Vencendo
+                        } else if (vencimento <= trintaDias) {
                             hasCNH = true;
                             containerCNH.innerHTML += `
-                                <div class="flex items-center justify-between p-2 bg-orange-100 dark:bg-orange-900/30 rounded border-l-4 border-orange-500 mb-1">
+                                <div onclick="editarFuncionario('${m.cadastro}')" class="flex items-center justify-between p-2 bg-orange-100 dark:bg-orange-900/30 rounded border-l-4 border-orange-500 mb-1 cursor-pointer hover:bg-orange-200 dark:hover:bg-orange-900/50">
                                     <span class="font-medium text-orange-800 dark:text-orange-300 truncate max-w-[150px]" title="${m.nome}">${m.nome}</span>
                                     <span class="text-xs font-bold text-orange-600 dark:text-orange-400 whitespace-nowrap">Vence: ${m.cnhVencimento.split('-').reverse().join('/')}</span>
                                 </div>
