@@ -2125,7 +2125,7 @@
                 turno: f.turno || '',
                 lider: f.lider || ''
             }));
-            localStorage.setItem('funcionarios', JSON.stringify(funcionarios));
+            try { localStorage.setItem('funcionarios', JSON.stringify(funcionarios)); } catch (e) { console.warn('Falha ao salvar funcionarios locais no localStorage:', e); }
             carregarFuncionarios();
         }
 
@@ -2154,7 +2154,7 @@
                         userId: row.user_id
                     }));
                     
-                    localStorage.setItem('faltas', JSON.stringify(faltas));
+                    try { localStorage.setItem('faltas', JSON.stringify(faltas)); } catch (e) { console.warn('Falha ao salvar faltas no localStorage:', e); }
                     faltasLoadedFromDB = true;
                     showMessage('Faltas atualizadas do banco', 'success');
                 }
@@ -3561,12 +3561,8 @@
                 const dataInicialAtestado = document.getElementById('data-inicial-atestado').value;
                 let duracaoAtestado = parseInt(document.getElementById('duracao-atestado').value);
                 const motivoNorm = normalizarMotivo(motivo);
-                if (motivoNorm === 'atestado-medico') {
-                    const fileInput = document.getElementById('atestado-foto');
-                    const file = fileInput && fileInput.files ? fileInput.files[0] : null;
-                    if (!file) { showMessage('Foto do atestado é obrigatória', 'error'); return; }
-                }
-
+                // Foto do atestado agora é opcional
+                
                 if (!dataInicialAtestado || (motivoNorm !== 'ferias' && (!duracaoAtestado || duracaoAtestado <= 0))) {
                     showMessage('Para período, informe data inicial e duração válidas!', 'error');
                     return;
@@ -3599,7 +3595,7 @@
                     if (sucessoDBFerias) {
                         faltas.push(faltaUnica);
                         if (Array.isArray(window.faltas)) { window.faltas.push(faltaUnica); } else { window.faltas = JSON.parse(localStorage.getItem('faltas') || '[]'); }
-                        localStorage.setItem('faltas', JSON.stringify(faltas));
+                        try { localStorage.setItem('faltas', JSON.stringify(faltas)); } catch (e) { console.warn('Falha ao salvar no localStorage:', e); if (!session) throw e; }
                         adicionarRegistroHistorico('falta', `${getPeriodoLabel(motivo)} registrado: ${nomeFunc} (${duracaoAtestado} dias)`, `Período: ${formatarDataParaExibicao(dataInicialAtestado)} a ${formatarDataParaExibicao(fimPeriodo)}`);
                         showMessage('Férias registrada com sucesso!', 'success');
                         cancelarEdicao();
@@ -3609,8 +3605,10 @@
                     if (normalizarMotivo(motivo) === 'atestado-medico') {
                         const fileInput = document.getElementById('atestado-foto');
                         const file = fileInput && fileInput.files ? fileInput.files[0] : null;
-                        fotoUrl = await uploadAtestadoFoto(file, matricula, dataInicialAtestado);
-                        if (!fotoUrl) { showMessage('Falha ao processar a foto do atestado', 'error'); return; }
+                        if (file) {
+                            fotoUrl = await uploadAtestadoFoto(file, matricula, dataInicialAtestado);
+                            if (!fotoUrl) { showMessage('Falha ao processar a foto do atestado', 'error'); return; }
+                        }
                     }
                     const datasAtestado = gerarDatasPeriodo(dataInicialAtestado, duracaoAtestado);
                     const faltasExistentes = faltas.filter(f => f.matricula === matricula && datasAtestado.includes(f.data));
@@ -3630,7 +3628,7 @@
                     if (sucessoDB) {
                         faltas.push(...novasFaltas);
                         if (Array.isArray(window.faltas)) { window.faltas.push(...novasFaltas); } else { window.faltas = JSON.parse(localStorage.getItem('faltas') || '[]'); }
-                        localStorage.setItem('faltas', JSON.stringify(faltas));
+                        try { localStorage.setItem('faltas', JSON.stringify(faltas)); } catch (e) { console.warn('Falha ao salvar no localStorage:', e); if (!session) throw e; }
                         adicionarRegistroHistorico('falta', `${getPeriodoLabel(motivo)} registrado: ${nomeFunc} (${duracaoAtestado} dias)`, `Período: ${formatarDataParaExibicao(dataInicialAtestado)} a ${formatarDataParaExibicao(datasAtestado[datasAtestado.length-1])}`);
                         showMessage(`${getPeriodoLabel(motivo)} registrado com sucesso! ${novasFaltas.length} registro(s) criado(s).`, 'success');
                         cancelarEdicao();
@@ -3691,7 +3689,7 @@
                         );
                         showMessage('Falta registrada com sucesso!', 'success');
                     }
-                    localStorage.setItem('faltas', JSON.stringify(faltas));
+                    try { localStorage.setItem('faltas', JSON.stringify(faltas)); } catch (e) { console.warn('Falha ao salvar no localStorage:', e); if (!session) throw e; }
                     cancelarEdicao();
                 }
             }
@@ -4922,6 +4920,8 @@
                 graficoMotivos.update();
                 return;
             }
+            const existingChart = ChartLib.getChart(canvas);
+            if (existingChart) existingChart.destroy();
             graficoMotivos = new ChartLib(ctx, {
                 type: 'doughnut',
                 data: { labels: dados.labels, datasets: [{ data: dados.data, backgroundColor: dados.cores, borderWidth: 2, borderColor: '#fff' }] },
@@ -4940,6 +4940,8 @@
                 graficoEvolucao.update();
                 return;
             }
+            const existingChart = ChartLib.getChart(canvas);
+            if (existingChart) existingChart.destroy();
             graficoEvolucao = new ChartLib(ctx, {
                 type: 'line',
                 data: { labels: dados.labels, datasets: [{ label: 'Faltas', data: dados.data, borderColor: '#5D5CDE', backgroundColor: 'rgba(93, 92, 222, 0.1)', borderWidth: 3, fill: true, tension: 0.4 }] },
@@ -4959,6 +4961,8 @@
                 graficoSetores.update();
                 return;
             }
+            const existingChart = ChartLib.getChart(canvas);
+            if (existingChart) existingChart.destroy();
             graficoSetores = new ChartLib(ctx, {
                 type: 'bar',
                 data: { labels: dados.labels, datasets: [{ label: 'Faltas por Setor', data: dados.data, backgroundColor: dados.cores, borderWidth: 1 }] },
@@ -4978,6 +4982,8 @@
                 graficoTurnos.update();
                 return;
             }
+            const existingChart = ChartLib.getChart(canvas);
+            if (existingChart) existingChart.destroy();
             graficoTurnos = new ChartLib(ctx, {
                 type: 'pie',
                 data: { labels: dados.labels, datasets: [{ data: dados.data, backgroundColor: dados.cores, borderWidth: 2, borderColor: '#fff' }] },
