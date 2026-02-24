@@ -1435,6 +1435,22 @@
         // Mostrar aviso de offline apenas uma vez
         let notificouFalhaConexao = false;
 
+        // ===== FUNÇÃO SEGURA PARA LOCALSTORAGE (QuotaExceededError) =====
+        function safeLocalStorageSetItem(key, value) {
+            try {
+                localStorage.setItem(key, value);
+            } catch (e) {
+                if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                    console.warn(`Local Storage quota exceeded for key "${key}". Data not saved locally.`, e);
+                    // Opcional: Tentar limpar dados antigos se for crítico, mas por enquanto apenas avisamos.
+                    // Em um app real, poderíamos implementar uma estratégia de LRU (Least Recently Used) aqui.
+                    showMessage('Aviso: Limite de armazenamento local atingido. Alguns dados offline podem não ser salvos, mas o banco de dados está seguro.', 'warning');
+                } else {
+                    console.error('Error saving to localStorage:', e);
+                }
+            }
+        }
+
         // ===== DADOS LOCAIS (fallback) =====
         let funcionarios = JSON.parse(localStorage.getItem('funcionarios') || '[]');
         let faltas = JSON.parse(localStorage.getItem('faltas') || '[]');
@@ -2144,7 +2160,7 @@
                         cnhFotoUrl: row.cnh_foto_url || null
                     }));
                     
-                    localStorage.setItem('funcionarios', JSON.stringify(funcionarios));
+                    safeLocalStorageSetItem('funcionarios', JSON.stringify(funcionarios));
                     funcionariosLoadedFromDB = true;
                     carregarFuncionarios();
                     showMessage('Funcionários atualizados do banco', 'success');
@@ -2167,7 +2183,7 @@
                 turno: f.turno || '',
                 lider: f.lider || ''
             }));
-            try { localStorage.setItem('funcionarios', JSON.stringify(funcionarios)); } catch (e) { console.warn('Falha ao salvar funcionarios locais no localStorage:', e); }
+            try { safeLocalStorageSetItem('funcionarios', JSON.stringify(funcionarios)); } catch (e) { console.warn('Falha ao salvar funcionarios locais no localStorage:', e); }
             carregarFuncionarios();
         }
 
@@ -2196,7 +2212,7 @@
                         userId: row.user_id
                     }));
                     
-                    try { localStorage.setItem('faltas', JSON.stringify(faltas)); } catch (e) { console.warn('Falha ao salvar faltas no localStorage:', e); }
+                    try { safeLocalStorageSetItem('faltas', JSON.stringify(faltas)); } catch (e) { console.warn('Falha ao salvar faltas no localStorage:', e); }
                     faltasLoadedFromDB = true;
                     showMessage('Faltas atualizadas do banco', 'success');
                 }
@@ -2437,7 +2453,7 @@
         }
 
         function syncUsuariosLocal() {
-            try { localStorage.setItem('usuarios', JSON.stringify(usuarios)); } catch (e) {}
+            try { safeLocalStorageSetItem('usuarios', JSON.stringify(usuarios)); } catch (e) {}
         }
 
         function getUserPermissions(email) {
@@ -2839,7 +2855,7 @@
             };
             
             historico.unshift(registro);
-            localStorage.setItem('historico', JSON.stringify(historico));
+            safeLocalStorageSetItem('historico', JSON.stringify(historico));
             
             // Salvar no banco se estiver logado
             if (session) {
@@ -3299,7 +3315,7 @@
                 
                 if (sucessoDB || !session) {
                     funcionarios.push(novoFuncionario);
-                    localStorage.setItem('funcionarios', JSON.stringify(funcionarios));
+                    safeLocalStorageSetItem('funcionarios', JSON.stringify(funcionarios));
                     
                     adicionarRegistroHistorico(
                         'funcionario', 
@@ -3358,92 +3374,120 @@
 
         async function salvarEdicaoFuncionario(e) {
             e.preventDefault();
-            
-            const cadastroOriginal = document.getElementById('edit-func-id').value;
-            const matricula = document.getElementById('edit-func-matricula').value;
-            const empresa = document.getElementById('edit-func-empresa').value;
-            const nome = document.getElementById('edit-func-nome').value;
-            const cargo = document.getElementById('edit-func-cargo').value;
-            const descricaoLocal = document.getElementById('edit-func-setor').value;
-            const frente = document.getElementById('edit-func-frente').value;
-            const turno = document.getElementById('edit-func-turno').value;
-            const lider = document.getElementById('edit-func-lider').value;
-            const admissao = document.getElementById('edit-func-admissao').value;
-            
-            // CNH
-            const cnhNumero = document.getElementById('edit-func-cnh').value;
-            const cnhExpedicao = document.getElementById('edit-func-cnh-expedicao').value;
-            const cnhVencimento = document.getElementById('edit-func-cnh-vencimento').value;
-            const cnhFotoInput = document.getElementById('edit-func-cnh-foto');
-            const cnhFoto = cnhFotoInput && cnhFotoInput.files ? cnhFotoInput.files[0] : null;
 
-            if (cargo.toLowerCase().includes('motorista')) {
-                if (!cnhNumero || !cnhExpedicao || !cnhVencimento) {
-                    showMessage('Para motoristas, os dados da CNH são obrigatórios!', 'error');
-                    return;
-                }
+            const btnSubmit = document.querySelector('#form-editar-funcionario button[type="submit"]');
+            const originalText = btnSubmit ? btnSubmit.innerText : 'Salvar Alterações';
+            if (btnSubmit) {
+                btnSubmit.disabled = true;
+                btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
             }
-
-            const index = funcionarios.findIndex(f => f.cadastro.toString() === cadastroOriginal);
-            if (index !== -1) {
-                const funcionarioOriginal = { ...funcionarios[index] };
-                const funcionarioAtualizado = {
-                    ...funcionarios[index],
-                    cadastro: Number(matricula),
-                    empresa: Number(empresa),
-                    nome,
-                    cargo,
-                    descricaoLocal,
-                    frente,
-                    turno,
-                    lider,
-                    admissao: admissao || null,
-                    cnhNumero,
-                    cnhExpedicao: cnhExpedicao || null,
-                    cnhVencimento: cnhVencimento || null
-                };
+            
+            try {
+                const cadastroOriginal = document.getElementById('edit-func-id').value;
+                const matricula = document.getElementById('edit-func-matricula').value;
+                const empresa = document.getElementById('edit-func-empresa').value;
+                const nome = document.getElementById('edit-func-nome').value;
+                const cargo = document.getElementById('edit-func-cargo').value;
+                const descricaoLocal = document.getElementById('edit-func-setor').value;
+                const frente = document.getElementById('edit-func-frente').value;
+                const turno = document.getElementById('edit-func-turno').value;
+                const lider = document.getElementById('edit-func-lider').value;
+                const admissao = document.getElementById('edit-func-admissao').value;
                 
-                if (cnhFoto) {
-                    const url = await uploadAtestadoFoto(cnhFoto, matricula, 'cnh');
-                    if (url) funcionarioAtualizado.cnhFotoUrl = url;
+                // CNH
+                const cnhNumero = document.getElementById('edit-func-cnh').value;
+                const cnhExpedicao = document.getElementById('edit-func-cnh-expedicao').value;
+                const cnhVencimento = document.getElementById('edit-func-cnh-vencimento').value;
+                const cnhFotoInput = document.getElementById('edit-func-cnh-foto');
+                const cnhFoto = cnhFotoInput && cnhFotoInput.files ? cnhFotoInput.files[0] : null;
+
+                if (cargo && cargo.toLowerCase().includes('motorista')) {
+                    if (!cnhNumero || !cnhExpedicao || !cnhVencimento) {
+                        showMessage('Para motoristas, os dados da CNH são obrigatórios!', 'error');
+                        if (btnSubmit) {
+                            btnSubmit.disabled = false;
+                            btnSubmit.innerText = originalText;
+                        }
+                        return;
+                    }
                 }
 
-                const sucessoDB = await salvarFuncionarioDB(funcionarioAtualizado);
-                
-                if (sucessoDB || !session) {
-                    funcionarios[index] = funcionarioAtualizado;
-
-                    faltas.forEach(falta => {
-                        if (falta.matricula === cadastroOriginal) {
-                            falta.nomeFuncionario = nome;
+                const index = funcionarios.findIndex(f => f.cadastro.toString() === cadastroOriginal);
+                if (index !== -1) {
+                    const funcionarioOriginal = { ...funcionarios[index] };
+                    const funcionarioAtualizado = {
+                        ...funcionarios[index],
+                        cadastro: Number(matricula),
+                        empresa: Number(empresa),
+                        nome,
+                        cargo,
+                        descricaoLocal,
+                        frente: frente || '',
+                        turno: turno || '',
+                        lider: lider || '',
+                        admissao: admissao || null,
+                        cnhNumero: cnhNumero || null,
+                        cnhExpedicao: cnhExpedicao || null,
+                        cnhVencimento: cnhVencimento || null
+                    };
+                    
+                    if (cnhFoto) {
+                        try {
+                            const url = await uploadAtestadoFoto(cnhFoto, matricula, 'cnh');
+                            if (url) funcionarioAtualizado.cnhFotoUrl = url;
+                        } catch (err) {
+                            console.error("Erro no upload da foto CNH:", err);
+                            showMessage('Erro ao processar foto da CNH, salvando sem foto.', 'warning');
                         }
-                    });
-
-                    localStorage.setItem('funcionarios', JSON.stringify(funcionarios));
-                    localStorage.setItem('faltas', JSON.stringify(faltas));
-                    
-                    let alteracoes = [];
-                    if (funcionarioOriginal.nome !== nome) alteracoes.push(`Nome: ${funcionarioOriginal.nome} → ${nome}`);
-                    if (funcionarioOriginal.cargo !== cargo) alteracoes.push(`Cargo: ${funcionarioOriginal.cargo} → ${cargo}`);
-                    if (funcionarioOriginal.descricaoLocal !== descricaoLocal) alteracoes.push(`Setor: ${funcionarioOriginal.descricaoLocal} → ${descricaoLocal}`);
-                    if (funcionarioOriginal.frente !== frente) alteracoes.push(`Frente: ${funcionarioOriginal.frente || 'N/A'} → ${frente || 'N/A'}`);
-                    if (funcionarioOriginal.turno !== turno) alteracoes.push(`Turno: ${funcionarioOriginal.turno || 'N/A'} → ${turno || 'N/A'}`);
-                    if (funcionarioOriginal.lider !== lider) alteracoes.push(`Líder: ${funcionarioOriginal.lider || 'N/A'} → ${lider || 'N/A'}`);
-                    if (funcionarioOriginal.admissao !== admissao) alteracoes.push(`Admissão: ${formatarDataParaExibicao(funcionarioOriginal.admissao)} → ${formatarDataParaExibicao(admissao)}`);
-                    if (funcionarioOriginal.cnhNumero !== cnhNumero) alteracoes.push(`CNH: ${funcionarioOriginal.cnhNumero || 'N/A'} → ${cnhNumero || 'N/A'}`);
-                    
-                    if (alteracoes.length > 0) {
-                        adicionarRegistroHistorico(
-                            'funcionario', 
-                            `Funcionário atualizado: ${nome} (Matrícula: ${matricula})`,
-                            `Alterações: ${alteracoes.join(', ')}`
-                        );
                     }
+
+                    const sucessoDB = await salvarFuncionarioDB(funcionarioAtualizado);
                     
-                    carregarFuncionarios();
-                    verificarCNHVencidas();
-                    showMessage('Funcionário atualizado com sucesso!', 'success');
-                    fecharModalEditarFuncionario();
+                    if (sucessoDB || !session) {
+                        funcionarios[index] = funcionarioAtualizado;
+
+                        faltas.forEach(falta => {
+                            if (falta.matricula === cadastroOriginal) {
+                                falta.nomeFuncionario = nome;
+                            }
+                        });
+
+                        safeLocalStorageSetItem('funcionarios', JSON.stringify(funcionarios));
+                        safeLocalStorageSetItem('faltas', JSON.stringify(faltas));
+                        
+                        let alteracoes = [];
+                        if (funcionarioOriginal.nome !== nome) alteracoes.push(`Nome: ${funcionarioOriginal.nome} → ${nome}`);
+                        if (funcionarioOriginal.cargo !== cargo) alteracoes.push(`Cargo: ${funcionarioOriginal.cargo} → ${cargo}`);
+                        if (funcionarioOriginal.descricaoLocal !== descricaoLocal) alteracoes.push(`Setor: ${funcionarioOriginal.descricaoLocal} → ${descricaoLocal}`);
+                        if (funcionarioOriginal.frente !== frente) alteracoes.push(`Frente: ${funcionarioOriginal.frente || 'N/A'} → ${frente || 'N/A'}`);
+                        if (funcionarioOriginal.turno !== turno) alteracoes.push(`Turno: ${funcionarioOriginal.turno || 'N/A'} → ${turno || 'N/A'}`);
+                        if (funcionarioOriginal.lider !== lider) alteracoes.push(`Líder: ${funcionarioOriginal.lider || 'N/A'} → ${lider || 'N/A'}`);
+                        if (funcionarioOriginal.admissao !== admissao) alteracoes.push(`Admissão: ${formatarDataParaExibicao(funcionarioOriginal.admissao)} → ${formatarDataParaExibicao(admissao)}`);
+                        if (funcionarioOriginal.cnhNumero !== cnhNumero) alteracoes.push(`CNH: ${funcionarioOriginal.cnhNumero || 'N/A'} → ${cnhNumero || 'N/A'}`);
+                        if (funcionarioOriginal.cnhExpedicao !== cnhExpedicao) alteracoes.push(`CNH Exp: ${formatarDataParaExibicao(funcionarioOriginal.cnhExpedicao)} → ${formatarDataParaExibicao(cnhExpedicao)}`);
+                        if (funcionarioOriginal.cnhVencimento !== cnhVencimento) alteracoes.push(`CNH Venc: ${formatarDataParaExibicao(funcionarioOriginal.cnhVencimento)} → ${formatarDataParaExibicao(cnhVencimento)}`);
+                        
+                        if (alteracoes.length > 0) {
+                            adicionarRegistroHistorico(
+                                'funcionario', 
+                                `Funcionário atualizado: ${nome} (Matrícula: ${matricula})`,
+                                `Alterações: ${alteracoes.join(', ')}`
+                            );
+                        }
+                        
+                        carregarFuncionarios();
+                        verificarCNHVencidas();
+                        showMessage('Funcionário alterado com sucesso!', 'success');
+                        fecharModalEditarFuncionario();
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao atualizar funcionário:', error);
+                showMessage('Erro inesperado ao atualizar: ' + error.message, 'error');
+            } finally {
+                if (btnSubmit) {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerText = originalText;
                 }
             }
         }
@@ -3468,8 +3512,8 @@
                         faltas = faltas.filter(f => f.matricula !== cadastro);
                         const faltasRemovidas = faltasAntes - faltas.length;
 
-                        localStorage.setItem('funcionarios', JSON.stringify(funcionarios));
-                        localStorage.setItem('faltas', JSON.stringify(faltas));
+                        safeLocalStorageSetItem('funcionarios', JSON.stringify(funcionarios));
+                        safeLocalStorageSetItem('faltas', JSON.stringify(faltas));
                         
                         adicionarRegistroHistorico(
                             'funcionario', 
@@ -3668,7 +3712,7 @@
                     if (sucessoDBFerias) {
                         faltas.push(faltaUnica);
                         if (Array.isArray(window.faltas)) { window.faltas.push(faltaUnica); } else { window.faltas = JSON.parse(localStorage.getItem('faltas') || '[]'); }
-                        try { localStorage.setItem('faltas', JSON.stringify(faltas)); } catch (e) { console.warn('Falha ao salvar no localStorage:', e); if (!session) throw e; }
+                        try { safeLocalStorageSetItem('faltas', JSON.stringify(faltas)); } catch (e) { console.warn('Falha ao salvar no localStorage:', e); if (!session) throw e; }
                         adicionarRegistroHistorico('falta', `${getPeriodoLabel(motivo)} registrado: ${nomeFunc} (${duracaoAtestado} dias)`, `Período: ${formatarDataParaExibicao(dataInicialAtestado)} a ${formatarDataParaExibicao(fimPeriodo)}`);
                         showMessage('Férias registrada com sucesso!', 'success');
                         cancelarEdicao();
@@ -3701,7 +3745,7 @@
                     if (sucessoDB) {
                         faltas.push(...novasFaltas);
                         if (Array.isArray(window.faltas)) { window.faltas.push(...novasFaltas); } else { window.faltas = JSON.parse(localStorage.getItem('faltas') || '[]'); }
-                        try { localStorage.setItem('faltas', JSON.stringify(faltas)); } catch (e) { console.warn('Falha ao salvar no localStorage:', e); if (!session) throw e; }
+                        try { safeLocalStorageSetItem('faltas', JSON.stringify(faltas)); } catch (e) { console.warn('Falha ao salvar no localStorage:', e); if (!session) throw e; }
                         adicionarRegistroHistorico('falta', `${getPeriodoLabel(motivo)} registrado: ${nomeFunc} (${duracaoAtestado} dias)`, `Período: ${formatarDataParaExibicao(dataInicialAtestado)} a ${formatarDataParaExibicao(datasAtestado[datasAtestado.length-1])}`);
                         showMessage(`${getPeriodoLabel(motivo)} registrado com sucesso! ${novasFaltas.length} registro(s) criado(s).`, 'success');
                         cancelarEdicao();
@@ -3999,7 +4043,7 @@
                         faltas = faltas.filter(f => !setIds.has(f.id?.toString()));
                         excluidasComSucesso = antes - faltas.length;
 
-                        localStorage.setItem('faltas', JSON.stringify(faltas));
+                        safeLocalStorageSetItem('faltas', JSON.stringify(faltas));
                         
                         adicionarRegistroHistorico(
                             'falta', 
@@ -4081,7 +4125,7 @@
                 if (sucessoDB || !session) {
                     faltas[index] = faltaAtualizada;
                     
-                    localStorage.setItem('faltas', JSON.stringify(faltas));
+                    safeLocalStorageSetItem('faltas', JSON.stringify(faltas));
                     
                     let alteracoes = [];
                     if (faltaOriginal.data !== data) alteracoes.push(`Data: ${formatarDataParaExibicao(faltaOriginal.data)} → ${formatarDataParaExibicao(data)}`);
