@@ -834,6 +834,7 @@
                             <option value="atestados">Atestados Médicos</option>
                             <option value="ferias">Férias</option>
                             <option value="banco_horas">Banco de Horas</option>
+                            <option value="cnh_status">Status CNH Motoristas</option>
                             <option value="comparativo">Comparativo Mensal</option>
                         </select>
                     </div>
@@ -1467,6 +1468,47 @@
         }
 
          const FUNCIONARIOS_BASE = [
+            {"empresa": 25, "cadastro": 624717, "nome": "CESAR RODRIGUES FERREIRA SANTOS", "cargo": "MOTORISTA II", "descricaoLocal": "CAMINHAO TORTA DE FILTRO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "11/02/2026"},
+            {"empresa": 25, "cadastro": 624718, "nome": "EDUARDO NERES BARBOSA", "cargo": "TRATORISTA DE TRANSBORDO", "descricaoLocal": "TRATOR TRANSBORDO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "11/02/2026"},
+            {"empresa": 25, "cadastro": 624720, "nome": "GABRIEL DIAS DE MIRANDA", "cargo": "MOTORISTA II", "descricaoLocal": "CAMINHAO TORTA DE FILTRO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "11/02/2026"},
+            {"empresa": 25, "cadastro": 624722, "nome": "JAIR ROSEMIRO DANTAS", "cargo": "TRATORISTA DE TRANSBORDO", "descricaoLocal": "TRATOR TRANSBORDO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "11/02/2026"},
+            {"empresa": 25, "cadastro": 624723, "nome": "JOSE AILTON AVELINO DOS SANTOS", "cargo": "TRATORISTA DE TRANSBORDO", "descricaoLocal": "TRATOR TRANSBORDO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "11/02/2026"},
+            {"empresa": 25, "cadastro": 624724, "nome": "JULIELSON DA SILVA ABREU", "cargo": "TRATORISTA DE TRANSBORDO", "descricaoLocal": "TRATOR TRANSBORDO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "11/02/2026"},
+            {"empresa": 25, "cadastro": 624725, "nome": "JUNIO ROBERTO MAARQUES DA SILVA", "cargo": "MOTORISTA CANAVIEIRO", "descricaoLocal": "CAMINHAO CANAVIEIRO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "11/02/2026"},
+            {"empresa": 25, "cadastro": 624727, "nome": "RAMON CESAR VIEIRA", "cargo": "MOTORISTA I", "descricaoLocal": "CAMINHAO APOIO FRENTE MECANIZADA - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "11/02/2026"},
+            {"empresa": 25, "cadastro": 624729, "nome": "MARTINHO DONIZETE FERREIRA", "cargo": "MOTORISTA I", "descricaoLocal": "NONINO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "11/02/2026"},
+            {"empresa": 25, "cadastro": 624730, "nome": "ELIAS CARDOSO DA COSTA", "cargo": "TRATORISTA II", "descricaoLocal": "NONINO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "11/02/2026"},
+            {"empresa": 25, "cadastro": 624731, "nome": "RUAN DE LIMA E SILVA", "cargo": "TRATORISTA II", "descricaoLocal": "COMPOSTAGEM AGR - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "11/02/2026"},
+            {"empresa": 25, "cadastro": 624732, "nome": "RUBERPAULO LOPES DE OLIVEIRA", "cargo": "MOTORISTA II", "descricaoLocal": "CAMINHAO TORTA DE FILTRO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "11/02/2026"},
+            {"empresa": 25, "cadastro": 624736, "nome": "AGUINALDO DE OLIVEIRA", "cargo": "MOTORISTA CANAVIEIRO", "descricaoLocal": "CAMINHAO CANAVIEIRO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "23/02/2026"},
+            {"empresa": 25, "cadastro": 624737, "nome": "CARLOS BASTOS DE SOUZA", "cargo": "MOTORISTA CANAVIEIRO", "descricaoLocal": "CAMINHAO CANAVIEIRO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "23/02/2026"},
+            {"empresa": 25, "cadastro": 624739, "nome": "EDMILSON SANTANA DE SOUZA", "cargo": "MOTORISTA CANAVIEIRO", "descricaoLocal": "CAMINHAO CANAVIEIRO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "23/02/2026"},
+            {"empresa": 25, "cadastro": 624742, "nome": "JOSE ORLANDO DOS SANTOS", "cargo": "MOTORISTA CANAVIEIRO", "descricaoLocal": "CAMINHAO CANAVIEIRO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "23/02/2026"},
+            {"empresa": 25, "cadastro": 624744, "nome": "VALDEIR BARBOSA DE ANDRADE", "cargo": "MOTORISTA I", "descricaoLocal": "IRRIGACAO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "23/02/2026"},
+            {"empresa": 25, "cadastro": 624738, "nome": "CLEITON AUGUSTINHO DE FREITAS", "cargo": "TRATORISTA DE TRANSBORDO", "descricaoLocal": "TRATOR TRANSBORDO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "23/02/2026"},
+            {"empresa": 25, "cadastro": 624740, "nome": "JOAO VICTOR FELIX DA SILVA", "cargo": "TRATORISTA DE TRANSBORDO", "descricaoLocal": "TRATOR TRANSBORDO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "23/02/2026"},
+            {"empresa": 25, "cadastro": 624741, "nome": "JOSE MARCELO SOUSA LEITE", "cargo": "TRATORISTA DE TRANSBORDO", "descricaoLocal": "TRATOR TRANSBORDO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "23/02/2026"},
+            {"empresa": 25, "cadastro": 624749, "nome": "MARCELO BATISTA DA SILVA", "cargo": "OP DE COLHEDORA", "descricaoLocal": "COLHEDEIRA DA CANA - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "24/02/2026"},
+            {"empresa": 25, "cadastro": 624750, "nome": "NELSON DE OLIVEIRA FILHO", "cargo": "MOTORISTA II", "descricaoLocal": "CAMINHAO TORTA DE FILTRO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "24/02/2026"},
+            {"empresa": 25, "cadastro": 624678, "nome": "ANDERSON DA SILVA FERREIRA", "cargo": "MOTORISTA I", "descricaoLocal": "CAMINHAO BATE VOLTA - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
+            {"empresa": 25, "cadastro": 624679, "nome": "CLEIDIOMAR NUNES OLIVEIRA", "cargo": "MOTORISTA CANAVIEIRO", "descricaoLocal": "CAMINHAO CANAVIEIRO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
+            {"empresa": 25, "cadastro": 624680, "nome": "DIVINO COSMO CANDIDO DA SILVA", "cargo": "MOTORISTA I", "descricaoLocal": "NONINO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
+            {"empresa": 25, "cadastro": 624681, "nome": "EDILSON RODRIGUES SERAFIM", "cargo": "MOTORISTA I", "descricaoLocal": "CAMINHAO BATE VOLTA - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
+            {"empresa": 25, "cadastro": 624682, "nome": "EDIMILSON DOMINGOS DA SILVA", "cargo": "MOTORISTA I", "descricaoLocal": "NONINO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
+            {"empresa": 25, "cadastro": 624683, "nome": "ELIELSON BARBOSA", "cargo": "MOTORISTA I", "descricaoLocal": "NONINO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
+            {"empresa": 25, "cadastro": 624684, "nome": "EMICASIO FERREIRA DE SOUSA", "cargo": "MOTORISTA I", "descricaoLocal": "NONINO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
+            {"empresa": 25, "cadastro": 624685, "nome": "FABRICIO SINIVAL DE SOUSA", "cargo": "MOTORISTA I", "descricaoLocal": "CAMINHAO BATE VOLTA - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
+            {"empresa": 25, "cadastro": 624686, "nome": "FRANCISCO GLAUBER ALVES DE JESUS", "cargo": "MOTORISTA CANAVIEIRO", "descricaoLocal": "CAMINHAO CANAVIEIRO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
+            {"empresa": 25, "cadastro": 624687, "nome": "JACKSON FERREIRA DE SOUSA", "cargo": "MOTORISTA I", "descricaoLocal": "NONINO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
+            {"empresa": 25, "cadastro": 624688, "nome": "JHON WEVERSON GOMES DA SILVA", "cargo": "MOTORISTA I", "descricaoLocal": "NONINO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
+            {"empresa": 25, "cadastro": 624689, "nome": "JOSE GERALDO SILVA CRUZ", "cargo": "MOTORISTA CANAVIEIRO", "descricaoLocal": "CAMINHAO CANAVIEIRO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
+            {"empresa": 25, "cadastro": 624690, "nome": "JOSE HELENO DOS SANTOS", "cargo": "MOTORISTA CANAVIEIRO", "descricaoLocal": "CAMINHAO CANAVIEIRO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
+            {"empresa": 25, "cadastro": 624691, "nome": "JULIO OLAVO PINTO DE BRITO", "cargo": "MOTORISTA I", "descricaoLocal": "NONINO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
+            {"empresa": 25, "cadastro": 624692, "nome": "LUIZ CARLOS PEREIRA", "cargo": "MOTORISTA CANAVIEIRO", "descricaoLocal": "CAMINHAO CANAVIEIRO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
+            {"empresa": 25, "cadastro": 624693, "nome": "MARIO VALERIO SANTOS DA SILVA", "cargo": "MOTORISTA I", "descricaoLocal": "NONINO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
+            {"empresa": 25, "cadastro": 624694, "nome": "MAURO SIMAO DO CARMO", "cargo": "MOTORISTA I", "descricaoLocal": "NONINO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
+            {"empresa": 25, "cadastro": 624695, "nome": "PAULO FERNANDES", "cargo": "MOTORISTA I", "descricaoLocal": "NONINO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
+            {"empresa": 25, "cadastro": 624696, "nome": "RUAN BISPO LAUREANO", "cargo": "MOTORISTA I", "descricaoLocal": "NONINO - CAMBUI", "lider": "JARBAS PIEROTE SOUZA", "admissao": "04/02/2025"},
             {"empresa": 25, "cadastro": 622468, "nome": "ACASSIO VIEIRA RIBEIRO", "cargo": "AUX CAMINHAO DE APOIO", "descricaoLocal": "CONTROLE DE INCENDIO CCT - CAMBUI", "admissao": "16/04/2020"},
             {"empresa": 25, "cadastro": 622908, "nome": "ADAIR ANTONIO BENTO", "cargo": "SUP DE IRRIGACAO", "descricaoLocal": "IRRIGACAO - CAMBUI", "admissao": "22/02/2013"},
             {"empresa": 25, "cadastro": 620720, "nome": "ADALBERTO DOS SANTOS GOMES", "cargo": "MOTORISTA I", "descricaoLocal": "IRRIGACAO - CAMBUI", "admissao": "19/04/2013"},
@@ -3178,75 +3220,106 @@
 
         async function cadastrarFuncionario(e) {
             e.preventDefault();
-
-            const matricula = document.getElementById('func-matricula').value;
-            const empresa = document.getElementById('func-empresa').value;
-            const nome = document.getElementById('func-nome').value;
-            const cargo = document.getElementById('func-cargo').value;
-            const descricaoLocal = document.getElementById('func-setor').value;
-            const frente = document.getElementById('func-frente').value;
-            const turno = document.getElementById('func-turno').value;
-            const lider = document.getElementById('func-lider').value;
-            const admissao = document.getElementById('func-admissao').value;
             
-            // Dados CNH
-            const cnhNumero = document.getElementById('func-cnh').value;
-            const cnhExpedicao = document.getElementById('func-cnh-expedicao').value;
-            const cnhVencimento = document.getElementById('func-cnh-vencimento').value;
-            const cnhFotoInput = document.getElementById('func-cnh-foto');
-            const cnhFoto = cnhFotoInput && cnhFotoInput.files ? cnhFotoInput.files[0] : null;
+            const btnSubmit = document.querySelector('#form-funcionario button[type="submit"]');
+            const originalText = btnSubmit ? btnSubmit.innerText : 'Salvar';
+            if (btnSubmit) {
+                btnSubmit.disabled = true;
+                btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+            }
 
-            // Validação Motorista
-            if (cargo.toLowerCase().includes('motorista')) {
-                if (!cnhNumero || !cnhExpedicao || !cnhVencimento) {
-                    showMessage('Para motoristas, os dados da CNH são obrigatórios!', 'error');
+            try {
+                const matricula = document.getElementById('func-matricula').value;
+                const empresa = document.getElementById('func-empresa').value;
+                const nome = document.getElementById('func-nome').value;
+                const cargo = document.getElementById('func-cargo').value;
+                const descricaoLocal = document.getElementById('func-setor').value;
+                const frente = document.getElementById('func-frente').value;
+                const turno = document.getElementById('func-turno').value;
+                const lider = document.getElementById('func-lider').value;
+                const admissao = document.getElementById('func-admissao').value;
+                
+                // Dados CNH
+                const cnhNumero = document.getElementById('func-cnh').value;
+                const cnhExpedicao = document.getElementById('func-cnh-expedicao').value;
+                const cnhVencimento = document.getElementById('func-cnh-vencimento').value;
+                const cnhFotoInput = document.getElementById('func-cnh-foto');
+                const cnhFoto = cnhFotoInput && cnhFotoInput.files ? cnhFotoInput.files[0] : null;
+
+                // Validação Motorista
+                if (cargo && cargo.toLowerCase().includes('motorista')) {
+                    if (!cnhNumero || !cnhExpedicao || !cnhVencimento) {
+                        showMessage('Para motoristas, os dados da CNH são obrigatórios!', 'error');
+                        if (btnSubmit) {
+                            btnSubmit.disabled = false;
+                            btnSubmit.innerText = originalText;
+                        }
+                        return;
+                    }
+                }
+
+                if (funcionarios.find(f => f.cadastro == matricula)) {
+                    showMessage('Já existe um funcionário com esta matrícula!', 'error');
+                    if (btnSubmit) {
+                        btnSubmit.disabled = false;
+                        btnSubmit.innerText = originalText;
+                    }
                     return;
                 }
-            }
 
-            if (funcionarios.find(f => f.cadastro == matricula)) {
-                showMessage('Já existe um funcionário com esta matrícula!', 'error');
-                return;
-            }
-
-            const novoFuncionario = {
-                empresa: Number(empresa),
-                cadastro: Number(matricula),
-                nome,
-                cargo,
-                descricaoLocal,
-                frente,
-                turno,
-                lider,
-                admissao: admissao || null,
-                cnhNumero: cnhNumero || null,
-                cnhExpedicao: cnhExpedicao || null,
-                cnhVencimento: cnhVencimento || null,
-                cnhFotoUrl: null
-            };
-            
-            if (cnhFoto) {
-                // Upload da foto
-                const url = await uploadAtestadoFoto(cnhFoto, matricula, 'cnh');
-                if (url) novoFuncionario.cnhFotoUrl = url;
-            }
-
-            const sucessoDB = await salvarFuncionarioDB(novoFuncionario);
-            
-            if (sucessoDB || !session) {
-                funcionarios.push(novoFuncionario);
-                localStorage.setItem('funcionarios', JSON.stringify(funcionarios));
+                const novoFuncionario = {
+                    empresa: Number(empresa),
+                    cadastro: Number(matricula),
+                    nome,
+                    cargo,
+                    descricaoLocal,
+                    frente: frente || '',
+                    turno: turno || '',
+                    lider: lider || '',
+                    admissao: admissao || null,
+                    cnhNumero: cnhNumero || null,
+                    cnhExpedicao: cnhExpedicao || null,
+                    cnhVencimento: cnhVencimento || null,
+                    cnhFotoUrl: null
+                };
                 
-                adicionarRegistroHistorico(
-                    'funcionario', 
-                    `Funcionário cadastrado: ${nome} (Matrícula: ${matricula})`,
-                    `Cargo: ${cargo}, Setor: ${descricaoLocal}, Frente: ${frente || 'N/A'}, Turno: ${turno || 'N/A'}, Líder: ${lider || 'N/A'}`
-                );
+                if (cnhFoto) {
+                    // Upload da foto
+                    try {
+                        const url = await uploadAtestadoFoto(cnhFoto, matricula, 'cnh');
+                        if (url) novoFuncionario.cnhFotoUrl = url;
+                    } catch (err) {
+                        console.error("Erro no upload da foto CNH:", err);
+                        // Continua salvando mesmo se foto falhar, mas avisa
+                        showMessage('Erro ao processar foto da CNH, salvando sem foto.', 'warning');
+                    }
+                }
+
+                const sucessoDB = await salvarFuncionarioDB(novoFuncionario);
                 
-                carregarFuncionarios();
-                verificarCNHVencidas();
-                showMessage('Funcionário cadastrado com sucesso!', 'success');
-                fecharModalFuncionario();
+                if (sucessoDB || !session) {
+                    funcionarios.push(novoFuncionario);
+                    localStorage.setItem('funcionarios', JSON.stringify(funcionarios));
+                    
+                    adicionarRegistroHistorico(
+                        'funcionario', 
+                        `Funcionário cadastrado: ${nome} (Matrícula: ${matricula})`,
+                        `Cargo: ${cargo}, Setor: ${descricaoLocal}, Frente: ${frente || 'N/A'}, Turno: ${turno || 'N/A'}, Líder: ${lider || 'N/A'}`
+                    );
+                    
+                    carregarFuncionarios();
+                    verificarCNHVencidas();
+                    showMessage('Funcionário cadastrado com sucesso!', 'success');
+                    fecharModalFuncionario();
+                }
+            } catch (error) {
+                console.error('Erro ao cadastrar funcionário:', error);
+                showMessage('Erro inesperado ao cadastrar: ' + error.message, 'error');
+            } finally {
+                if (btnSubmit) {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerText = originalText;
+                }
             }
         }
 
@@ -5168,35 +5241,41 @@
             const frenteSelecionada = document.getElementById('filtro-frente-relatorio').value;
             const liderSelecionado = document.getElementById('filtro-lider-relatorio').value;
             
-            if (!dataInicialStr || !dataFinalStr) {
+            if ((!dataInicialStr || !dataFinalStr) && tipo !== 'cnh_status') {
                 showMessage('Selecione o período para gerar o relatório!', 'error');
                 return;
             }
 
-            const dataInicial = new Date(dataInicialStr + '-01T00:00:00');
-            const dataFinal = new Date(dataFinalStr + '-01T00:00:00');
-            dataFinal.setMonth(dataFinal.getMonth() + 1);
-            dataFinal.setDate(0);
-
-            let faltasNoPeriodo = faltas.filter(f => {
-                const dataFalta = new Date(f.data + 'T12:00:00');
-                return dataFalta >= dataInicial && dataFalta <= dataFinal;
-            });
-
-            // Aplicar filtro por frente se selecionado
-            if (frenteSelecionada !== 'todas') {
-                faltasNoPeriodo = faltasNoPeriodo.filter(f => {
-                    const funcionario = funcionarios.find(func => func.cadastro.toString() === f.matricula);
-                    return funcionario && funcionario.frente === frenteSelecionada;
-                });
+            let dataInicial, dataFinal;
+            if (tipo !== 'cnh_status') {
+                dataInicial = new Date(dataInicialStr + '-01T00:00:00');
+                dataFinal = new Date(dataFinalStr + '-01T00:00:00');
+                dataFinal.setMonth(dataFinal.getMonth() + 1);
+                dataFinal.setDate(0);
             }
 
-            // Aplicar filtro por líder se selecionado
-            if (liderSelecionado !== 'todos') {
-                faltasNoPeriodo = faltasNoPeriodo.filter(f => {
-                    const funcionario = funcionarios.find(func => func.cadastro.toString() === f.matricula);
-                    return funcionario && (funcionario.lider || '').trim() === liderSelecionado;
+            let faltasNoPeriodo = [];
+            if (tipo !== 'cnh_status') {
+                faltasNoPeriodo = faltas.filter(f => {
+                    const dataFalta = new Date(f.data + 'T12:00:00');
+                    return dataFalta >= dataInicial && dataFalta <= dataFinal;
                 });
+
+                // Aplicar filtro por frente se selecionado
+                if (frenteSelecionada !== 'todas') {
+                    faltasNoPeriodo = faltasNoPeriodo.filter(f => {
+                        const funcionario = funcionarios.find(func => func.cadastro.toString() === f.matricula);
+                        return funcionario && funcionario.frente === frenteSelecionada;
+                    });
+                }
+
+                // Aplicar filtro por líder se selecionado
+                if (liderSelecionado !== 'todos') {
+                    faltasNoPeriodo = faltasNoPeriodo.filter(f => {
+                        const funcionario = funcionarios.find(func => func.cadastro.toString() === f.matricula);
+                        return funcionario && (funcionario.lider || '').trim() === liderSelecionado;
+                    });
+                }
             }
 
             let conteudoHtml = '';
@@ -5249,6 +5328,106 @@
                             </table>
                         </div>
                     `;
+                    break;
+                case 'cnh_status':
+                    const hojeCNH = new Date();
+                    hojeCNH.setHours(0, 0, 0, 0);
+                    const trintaDiasCNH = new Date();
+                    trintaDiasCNH.setDate(hojeCNH.getDate() + 30);
+                    trintaDiasCNH.setHours(0, 0, 0, 0);
+
+                    let motoristas = funcionarios.filter(f => f.cargo && f.cargo.toLowerCase().includes('motorista'));
+
+                    if (frenteSelecionada !== 'todas') {
+                        motoristas = motoristas.filter(m => m.frente === frenteSelecionada);
+                    }
+                    if (liderSelecionado !== 'todos') {
+                        motoristas = motoristas.filter(m => (m.lider || '').trim() === liderSelecionado);
+                    }
+
+                    const semCNH = [];
+                    const vencidas = [];
+                    const aVencer = [];
+                    const regulares = [];
+
+                    motoristas.forEach(m => {
+                        if (!m.cnhNumero || !m.cnhVencimento) {
+                            semCNH.push(m);
+                        } else {
+                            const vencimento = new Date(m.cnhVencimento);
+                            vencimento.setHours(0, 0, 0, 0);
+                            
+                            if (vencimento < hojeCNH) {
+                                vencidas.push(m);
+                            } else if (vencimento <= trintaDiasCNH) {
+                                aVencer.push(m);
+                            } else {
+                                regulares.push(m);
+                            }
+                        }
+                    });
+
+                    // Função auxiliar para criar tabela
+                    const createTableCNH = (title, list, colorClass) => {
+                        if (list.length === 0) return '';
+                        return `
+                            <div class="mt-6 mb-4">
+                                <h4 class="text-lg font-bold mb-2 ${colorClass} flex items-center gap-2">
+                                    <i class="fas fa-id-card"></i> ${title} <span class="text-sm bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded-full text-gray-700 dark:text-gray-300 ml-2">${list.length}</span>
+                                </h4>
+                                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                                    <table class="w-full table-auto text-sm">
+                                        <thead>
+                                            <tr class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                                                <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Nome</th>
+                                                <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Matrícula</th>
+                                                <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Frente</th>
+                                                <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">CNH</th>
+                                                <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Vencimento</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-700">
+                                            ${list.map(m => `
+                                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                                                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">${m.nome}</td>
+                                                    <td class="px-4 py-3 text-gray-600 dark:text-gray-300">${m.cadastro}</td>
+                                                    <td class="px-4 py-3 text-gray-600 dark:text-gray-300">${m.frente}</td>
+                                                    <td class="px-4 py-3 text-gray-600 dark:text-gray-300">${m.cnhNumero || '<span class="text-orange-500 italic">Não Inf.</span>'}</td>
+                                                    <td class="px-4 py-3 font-semibold ${colorClass}">${m.cnhVencimento ? m.cnhVencimento.split('-').reverse().join('/') : '<span class="text-orange-500 italic">N/A</span>'}</td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    };
+
+                    conteudoHtml = `
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                            <div class="bg-white dark:bg-gray-700 p-4 rounded-lg shadow border-l-4 border-blue-500">
+                                <div class="text-3xl font-bold text-gray-800 dark:text-white">${motoristas.length}</div>
+                                <div class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Motoristas</div>
+                            </div>
+                            <div class="bg-white dark:bg-gray-700 p-4 rounded-lg shadow border-l-4 border-red-500">
+                                <div class="text-3xl font-bold text-red-600 dark:text-red-400">${vencidas.length}</div>
+                                <div class="text-sm font-medium text-red-600 dark:text-red-400 uppercase tracking-wide">Vencidas</div>
+                            </div>
+                            <div class="bg-white dark:bg-gray-700 p-4 rounded-lg shadow border-l-4 border-yellow-500">
+                                <div class="text-3xl font-bold text-yellow-600 dark:text-yellow-400">${aVencer.length}</div>
+                                <div class="text-sm font-medium text-yellow-600 dark:text-yellow-400 uppercase tracking-wide">A Vencer (30 dias)</div>
+                            </div>
+                            <div class="bg-white dark:bg-gray-700 p-4 rounded-lg shadow border-l-4 border-orange-500">
+                                <div class="text-3xl font-bold text-orange-600 dark:text-orange-400">${semCNH.length}</div>
+                                <div class="text-sm font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wide">Sem Cadastro</div>
+                            </div>
+                        </div>
+                    `;
+
+                    conteudoHtml += createTableCNH('CNH Vencidas', vencidas, 'text-red-600 dark:text-red-400');
+                    conteudoHtml += createTableCNH('CNH a Vencer (Próx. 30 dias)', aVencer, 'text-yellow-600 dark:text-yellow-400');
+                    conteudoHtml += createTableCNH('Sem Cadastro de CNH', semCNH, 'text-orange-600 dark:text-orange-400');
+                    conteudoHtml += createTableCNH('Situação Regular', regulares, 'text-green-600 dark:text-green-400');
                     break;
                 case 'faltas_funcionario':
                     const faltasPorFunc = {};
@@ -5619,6 +5798,7 @@
                 'faltas_frente': 'Faltas por Frente',
                 'atestados': 'Atestados Médicos',
                 'ferias': 'Férias',
+                'cnh_status': 'Status CNH Motoristas',
                 'comparativo': 'Comparativo Mensal'
             };
             return tipos[tipo] || tipo;
