@@ -3635,7 +3635,15 @@
                     <td class="px-2 py-1 text-xs text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-700 sticky left-0 bg-blue-100 dark:bg-blue-900 z-10 font-semibold truncate max-w-[100px]" title="${equipe}">${equipe}</td>
                     <td class="px-2 py-1 text-xs text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700 sticky left-24 bg-white dark:bg-gray-800 z-10 font-mono">${matriculaStr}</td>
                     <td class="px-2 py-1 text-xs text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700 sticky left-40 bg-white dark:bg-gray-800 z-10 truncate max-w-[200px] font-medium" title="${nome}">${nome}</td>
-                    <td class="px-2 py-1 text-xs text-center font-bold text-gray-800 dark:text-gray-200 border-r border-gray-200 dark:border-gray-700">${turno}</td>
+                    <td class="px-2 py-1 text-xs text-center font-bold text-gray-800 dark:text-gray-200 border-r border-gray-200 dark:border-gray-700">
+                        <select class="px-1 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"
+                                onchange="alterarTurnoFuncionario('${escala.id}', '${matriculaStr}', this.value)">
+                            ${['Turno A','Turno B','Turno C','Turno ADM 1','Turno ADM 2','Folguista'].map(t => {
+                                const sel = (t === (turno || '').trim()) ? 'selected' : '';
+                                return `<option value="${t}" ${sel}>${t}</option>`;
+                            }).join('')}
+                        </select>
+                    </td>
                     <td class="px-2 py-1 text-xs text-center text-gray-600 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">${horario}</td>
                     <td onclick="alterarPadraoFuncionario('${escala.id}', '${matriculaStr}')" class="px-2 py-1 text-xs text-center text-blue-600 dark:text-blue-400 font-bold border-r border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors" title="Clique para alterar o padrão de escala deste funcionário">${padraoFunc}</td>
                     <td class="px-2 py-1 text-xs text-center text-gray-600 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700 truncate max-w-[100px]" title="${responsavel}">${responsavel}</td>`;
@@ -5134,6 +5142,35 @@
                     salvarEscalasLocal(escalas);
                     renderGridEscala(escala);
                 }
+            }
+        }
+
+        async function alterarTurnoFuncionario(escalaId, matricula, novoTurno) {
+            try {
+                const idx = funcionarios.findIndex(f => String(f.cadastro) === String(matricula));
+                if (idx === -1) return;
+                const antigo = (funcionarios[idx].turno || '').trim();
+                const atual = (novoTurno || '').trim();
+                if (antigo === atual) return;
+                const atualizado = { ...funcionarios[idx], turno: atual };
+                const ok = await salvarFuncionarioDB(atualizado);
+                if (ok || !session) {
+                    funcionarios[idx] = atualizado;
+                    safeLocalStorageSetItem('funcionarios', JSON.stringify(funcionarios));
+                    adicionarRegistroHistorico('funcionario', `Turno atualizado na escala: ${atualizado.nome} (Matrícula: ${atualizado.cadastro})`, `Turno: ${antigo || 'N/A'} → ${atual || 'N/A'}`);
+                    const select = document.getElementById('select-escala');
+                    const id = escalaId || (select ? select.value : null);
+                    if (id) {
+                        const esc = (sb ? escalasCache : carregarEscalasLocal()).find(e => e.id === id);
+                        if (esc) renderGridEscala(esc);
+                    }
+                    carregarFuncionarios();
+                    showMessage('Turno alterado com sucesso!', 'success');
+                } else {
+                    showMessage('Erro ao salvar turno no banco.', 'error');
+                }
+            } catch (e) {
+                showMessage('Erro ao alterar turno: ' + (e && e.message ? e.message : String(e)), 'error');
             }
         }
 
