@@ -2292,6 +2292,7 @@
                 session = currentSession;
                 updateAuthUI();
                 await carregarUsuariosDB();
+                await syncHorariosTurnosFromDB();
 
                 await carregarFuncionariosDB();
                 await Promise.allSettled([
@@ -2316,6 +2317,7 @@
                     } else {
                         if (window.presencaTimer) { clearInterval(window.presencaTimer); window.presencaTimer = null; }
                     }
+                    await syncHorariosTurnosFromDB();
                     await carregarFuncionariosDB();
                     await Promise.allSettled([
                         carregarFaltasDB(),
@@ -3637,9 +3639,11 @@
                     <td class="px-2 py-1 text-xs text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700 sticky left-40 bg-white dark:bg-gray-800 z-10 truncate max-w-[200px] font-medium" title="${nome}">${nome}</td>
                     <td class="px-2 py-1 text-xs text-center font-bold text-gray-800 dark:text-gray-200 border-r border-gray-200 dark:border-gray-700">
                         ${(() => {
+                            const currentTurno = (turno || '').trim();
                             const opts = getTurnosDisponiveis();
+                            if (currentTurno && !opts.includes(currentTurno)) opts.unshift(currentTurno);
                             const html = opts.map(t => {
-                                const sel = (t === (turno || '').trim()) ? 'selected' : '';
+                                const sel = (t === currentTurno) ? 'selected' : '';
                                 return `<option value="${t}" ${sel}>${t}</option>`;
                             }).join('');
                             return `<select class="px-1 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" onchange="alterarTurnoFuncionario('${escala.id}', '${matriculaStr}', this.value)">${html}</select>`;
@@ -4072,12 +4076,60 @@
             return defaults.concat(custom);
         }
         
+        async function carregarHorariosTurnosDB() {
+            try {
+                if (!sb || !session) return null;
+                const { data, error } = await sb
+                    .from('historico')
+                    .select('detalhes,data_hora')
+                    .eq('tipo', 'sistema')
+                    .eq('descricao', 'CONFIG_HORARIOS_TURNOS')
+                    .order('data_hora', { ascending: false })
+                    .limit(1);
+                if (error) throw error;
+                const row = Array.isArray(data) && data.length ? data[0] : null;
+                if (!row || !row.detalhes) return null;
+                const parsed = JSON.parse(row.detalhes);
+                if (!parsed || parsed.__type !== 'horariosTurnos' || typeof parsed.horarios !== 'object') return null;
+                return parsed.horarios;
+            } catch (_) {
+                return null;
+            }
+        }
+
+        async function salvarHorariosTurnosDB(horarios) {
+            try {
+                if (!sb || !session) return false;
+                const payload = {
+                    tipo: 'sistema',
+                    descricao: 'CONFIG_HORARIOS_TURNOS',
+                    data_hora: new Date().toISOString(),
+                    usuario: session && session.user ? session.user.email : 'Sistema',
+                    detalhes: JSON.stringify({ __type: 'horariosTurnos', horarios: horarios || {} }),
+                    user_id: session && session.user ? session.user.id : 'sistema'
+                };
+                const { error } = await sb.from('historico').insert(payload);
+                if (error) throw error;
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        async function syncHorariosTurnosFromDB() {
+            const horarios = await carregarHorariosTurnosDB();
+            if (horarios && typeof horarios === 'object') {
+                try { localStorage.setItem('horariosTurnos', JSON.stringify(horarios)); } catch (_) {}
+                return true;
+            }
+            return false;
+        }
+
         function salvarHorariosTurnos(horarios) {
-            localStorage.setItem('horariosTurnos', JSON.stringify(horarios));
-            showMessage('Horários dos turnos atualizados com sucesso!', 'success');
+            try { localStorage.setItem('horariosTurnos', JSON.stringify(horarios)); } catch (_) {}
         }
         
-        function abrirModalConfigurarHorarios() {
+        async function abrirModalConfigurarHorarios() {
             try {
                 console.log('Abrindo modal de configuração de horários...');
                 const modal = document.getElementById('modal-configurar-horarios');
@@ -4086,6 +4138,7 @@
                     console.log('Modal não encontrado, criando...');
                     criarModalConfigurarHorarios();
                 }
+                await syncHorariosTurnosFromDB();
                 carregarHorariosAtuais();
                 
                 // Remover classes que escondem o modal
@@ -4158,7 +4211,7 @@
             Object.entries(horarios).forEach(([nome, horario]) => adicionarLinhaTurno(nome, horario));
         }
         
-        function salvarConfiguracaoHorarios() {
+        async function salvarConfiguracaoHorarios() {
             const container = document.getElementById('lista-turnos-config');
             const rows = container ? Array.from(container.querySelectorAll('.linha-turno')) : [];
             const horarios = {};
@@ -4169,6 +4222,8 @@
             });
             console.log('Salvando horários:', horarios);
             salvarHorariosTurnos(horarios);
+            const tentouBanco = !!(sb && session);
+            const okBanco = tentouBanco ? await salvarHorariosTurnosDB(horarios) : false;
             fecharModalConfigurarHorarios();
             
             // Forçar recarregamento da escala atual
@@ -4185,7 +4240,11 @@
                             if (escala) {
                                 console.log('Renderizando escala com novos horários:', escala);
                                 renderGridEscala(escala);
-                                showMessage('Horários atualizados e escala recarregada!', 'success');
+                                if (tentouBanco) {
+                                    showMessage(okBanco ? 'Horários salvos no banco e escala recarregada!' : 'Horários salvos localmente (falha ao salvar no banco). Escala recarregada!', okBanco ? 'success' : 'warning');
+                                } else {
+                                    showMessage('Horários salvos localmente e escala recarregada!', 'success');
+                                }
                             } else {
                                 console.error('Escala não encontrada após recarregar');
                             }
@@ -4199,12 +4258,20 @@
                         if (escala) {
                             console.log('Renderizando escala (fallback):', escala);
                             renderGridEscala(escala);
-                            showMessage('Horários atualizados!', 'success');
+                            if (tentouBanco) {
+                                showMessage(okBanco ? 'Horários salvos no banco!' : 'Horários salvos localmente (falha ao salvar no banco).', okBanco ? 'success' : 'warning');
+                            } else {
+                                showMessage('Horários salvos localmente!', 'success');
+                            }
                         }
                     }
                 } else {
                     console.log('Nenhuma escala selecionada para recarregar');
-                    showMessage('Horários salvos! Abra uma escala para ver as alterações.', 'info');
+                    if (tentouBanco) {
+                        showMessage(okBanco ? 'Horários salvos no banco! Abra uma escala para ver as alterações.' : 'Horários salvos localmente (falha ao salvar no banco). Abra uma escala para ver as alterações.', okBanco ? 'success' : 'warning');
+                    } else {
+                        showMessage('Horários salvos localmente! Abra uma escala para ver as alterações.', 'info');
+                    }
                 }
             }, 100);
         }
@@ -4262,7 +4329,8 @@
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
                 if (cells.length >= 4) {
-                    const turnoCell = cells[3].textContent.trim();
+                    const sel = cells[3].querySelector('select');
+                    const turnoCell = (sel ? sel.value : cells[3].textContent).trim();
                     if (turnoCell === turno) {
                         count++;
                     }
@@ -4354,7 +4422,8 @@
                             rowData.push(nome);
                             
                             // TURNO abreviado
-                            let turno = cells[3].textContent.trim();
+                            const turnoSelect = cells[3].querySelector('select');
+                            let turno = (turnoSelect ? turnoSelect.value : cells[3].textContent).trim();
                             if (turno.includes('ADM')) {
                                 turno = 'ADM';
                             } else if (turno.includes('Folguista')) {
