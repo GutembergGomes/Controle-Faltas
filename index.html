@@ -3636,13 +3636,14 @@
                     <td class="px-2 py-1 text-xs text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700 sticky left-24 bg-white dark:bg-gray-800 z-10 font-mono">${matriculaStr}</td>
                     <td class="px-2 py-1 text-xs text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700 sticky left-40 bg-white dark:bg-gray-800 z-10 truncate max-w-[200px] font-medium" title="${nome}">${nome}</td>
                     <td class="px-2 py-1 text-xs text-center font-bold text-gray-800 dark:text-gray-200 border-r border-gray-200 dark:border-gray-700">
-                        <select class="px-1 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white"
-                                onchange="alterarTurnoFuncionario('${escala.id}', '${matriculaStr}', this.value)">
-                            ${['Turno A','Turno B','Turno C','Turno ADM 1','Turno ADM 2','Folguista'].map(t => {
+                        ${(() => {
+                            const opts = getTurnosDisponiveis();
+                            const html = opts.map(t => {
                                 const sel = (t === (turno || '').trim()) ? 'selected' : '';
                                 return `<option value="${t}" ${sel}>${t}</option>`;
-                            }).join('')}
-                        </select>
+                            }).join('');
+                            return `<select class="px-1 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 dark:text-white" onchange="alterarTurnoFuncionario('${escala.id}', '${matriculaStr}', this.value)">${html}</select>`;
+                        })()}
                     </td>
                     <td class="px-2 py-1 text-xs text-center text-gray-600 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">${horario}</td>
                     <td onclick="alterarPadraoFuncionario('${escala.id}', '${matriculaStr}')" class="px-2 py-1 text-xs text-center text-blue-600 dark:text-blue-400 font-bold border-r border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors" title="Clique para alterar o padrão de escala deste funcionário">${padraoFunc}</td>
@@ -4050,6 +4051,27 @@
             return horariosPadrao[turnoNormalizado] || '07:00/15:20';
         }
         
+        function getTurnosDisponiveis() {
+            const padrao = {
+                'Turno A': '07:00/15:20',
+                'Turno B': '15:00/23:20', 
+                'Turno C': '23:00/07:00',
+                'Turno ADM 1': '08:00/17:00',
+                'Turno ADM 2': '08:00/17:00',
+                'Folguista': 'Folguista'
+            };
+            let horarios = null;
+            try {
+                const raw = localStorage.getItem('horariosTurnos');
+                horarios = raw ? JSON.parse(raw) : padrao;
+            } catch (_) {
+                horarios = padrao;
+            }
+            const defaults = Object.keys(padrao);
+            const custom = Object.keys(horarios).filter(k => !defaults.includes(k)).sort();
+            return defaults.concat(custom);
+        }
+        
         function salvarHorariosTurnos(horarios) {
             localStorage.setItem('horariosTurnos', JSON.stringify(horarios));
             showMessage('Horários dos turnos atualizados com sucesso!', 'success');
@@ -4089,32 +4111,11 @@
                             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Configurar Horários dos Turnos</h3>
                             
                             <div class="space-y-4">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Turno A</label>
-                                        <input type="text" id="horario-turno-a" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="07:00/15:20">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Turno B</label>
-                                        <input type="text" id="horario-turno-b" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="15:00/23:20">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Turno C</label>
-                                        <input type="text" id="horario-turno-c" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="23:00/07:00">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Turno ADM 1</label>
-                                        <input type="text" id="horario-turno-adm1" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="08:00/17:00">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Turno ADM 2</label>
-                                        <input type="text" id="horario-turno-adm2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="08:00/17:00">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Folguista</label>
-                                        <input type="text" id="horario-folguista" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Folguista">
-                                    </div>
+                                <div class="flex items-center justify-between">
+                                    <div class="text-sm text-gray-600 dark:text-gray-300">Cadastre, edite ou remova turnos e seus horários</div>
+                                    <button id="btn-add-turno" class="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md">Adicionar turno</button>
                                 </div>
+                                <div id="lista-turnos-config" class="space-y-2"></div>
                                 
                                 <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md">
                                     <p class="text-sm text-blue-800 dark:text-blue-200">
@@ -4137,11 +4138,13 @@
                 </div>
             `;
             document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const addBtn = document.getElementById('btn-add-turno');
+            if (addBtn) addBtn.addEventListener('click', () => adicionarLinhaTurno('', ''));
         }
         
         function carregarHorariosAtuais() {
-            const horariosPersonalizados = localStorage.getItem('horariosTurnos');
-            const horarios = horariosPersonalizados ? JSON.parse(horariosPersonalizados) : {
+            const raw = localStorage.getItem('horariosTurnos');
+            const horarios = raw ? JSON.parse(raw) : {
                 'Turno A': '07:00/15:20',
                 'Turno B': '15:00/23:20',
                 'Turno C': '23:00/07:00',
@@ -4149,25 +4152,21 @@
                 'Turno ADM 2': '08:00/17:00',
                 'Folguista': 'Folguista'
             };
-            
-            document.getElementById('horario-turno-a').value = horarios['Turno A'] || '';
-            document.getElementById('horario-turno-b').value = horarios['Turno B'] || '';
-            document.getElementById('horario-turno-c').value = horarios['Turno C'] || '';
-            document.getElementById('horario-turno-adm1').value = horarios['Turno ADM 1'] || '';
-            document.getElementById('horario-turno-adm2').value = horarios['Turno ADM 2'] || '';
-            document.getElementById('horario-folguista').value = horarios['Folguista'] || '';
+            const container = document.getElementById('lista-turnos-config');
+            if (!container) return;
+            container.innerHTML = '';
+            Object.entries(horarios).forEach(([nome, horario]) => adicionarLinhaTurno(nome, horario));
         }
         
         function salvarConfiguracaoHorarios() {
-            const horarios = {
-                'Turno A': document.getElementById('horario-turno-a').value || '07:00/15:20',
-                'Turno B': document.getElementById('horario-turno-b').value || '15:00/23:20',
-                'Turno C': document.getElementById('horario-turno-c').value || '23:00/07:00',
-                'Turno ADM 1': document.getElementById('horario-turno-adm1').value || '08:00/17:00',
-                'Turno ADM 2': document.getElementById('horario-turno-adm2').value || '08:00/17:00',
-                'Folguista': document.getElementById('horario-folguista').value || 'Folguista'
-            };
-            
+            const container = document.getElementById('lista-turnos-config');
+            const rows = container ? Array.from(container.querySelectorAll('.linha-turno')) : [];
+            const horarios = {};
+            rows.forEach(r => {
+                const nome = (r.querySelector('.nome-turno')?.value || '').trim();
+                const hora = (r.querySelector('.horario-turno')?.value || '').trim();
+                if (nome) horarios[nome] = hora || '';
+            });
             console.log('Salvando horários:', horarios);
             salvarHorariosTurnos(horarios);
             fecharModalConfigurarHorarios();
@@ -4208,6 +4207,34 @@
                     showMessage('Horários salvos! Abra uma escala para ver as alterações.', 'info');
                 }
             }, 100);
+        }
+        
+        function adicionarLinhaTurno(nome, horario) {
+            const container = document.getElementById('lista-turnos-config');
+            if (!container) return;
+            const id = Math.random().toString(36).slice(2);
+            const div = document.createElement('div');
+            div.className = 'linha-turno grid grid-cols-1 md:grid-cols-12 gap-2 items-end';
+            div.innerHTML = `
+                <div class="md:col-span-5">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome do turno</label>
+                    <input type="text" class="nome-turno w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Ex.: Turno D" value="${nome || ''}">
+                </div>
+                <div class="md:col-span-5">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Horário</label>
+                    <input type="text" class="horario-turno w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="HH:MM/HH:MM ou 'Folguista'" value="${horario || ''}">
+                </div>
+                <div class="md:col-span-2 flex gap-2">
+                    <button type="button" class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md w-full" onclick="removerLinhaTurno('${id}')">Remover</button>
+                </div>
+            `;
+            div.id = `linha-${id}`;
+            container.appendChild(div);
+        }
+        
+        function removerLinhaTurno(id) {
+            const el = document.getElementById(`linha-${id}`);
+            if (el) el.remove();
         }
         
         function fecharModalConfigurarHorarios() {
