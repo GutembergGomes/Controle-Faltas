@@ -10,6 +10,15 @@
     <!-- Supabase JS (UMD) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- SheetJS para exportar escala em Excel (.xlsx) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- OCR e PDF Utils -->
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script>
+        // Configuração do Worker do PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    </script>
     <style>
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -81,6 +90,27 @@
         .dark .text-gray-500 { color: #cbd5e1 !important; }
         .dark ::placeholder { color: #94a3b8; }
         .dark td, .dark th { color: #e5e7eb; }
+        /* Estilos da Escala */
+        .grid-sticky thead th { position: sticky; top: 0; background: #f8fafc; z-index: 1; }
+        .dark .grid-sticky thead th { background: #374151; }
+        .cell-folga { background: #6b21a8; color: #fff; font-weight: 700; text-align: center; }
+        .cell-trabalho { background: #ffffff; color: #0f172a; text-align: center; }
+        .dark .cell-trabalho { background: #1f2937; color: #e5e7eb; }
+        
+        @media print {
+            body * { visibility: hidden; }
+            #escala-view, #escala-view * { visibility: visible; }
+            #escala-view { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; border: none; padding: 0; }
+            #escala-tabela { border: 1px solid #000; font-size: 10px; width: 100%; table-layout: fixed; }
+            #escala-tabela th, #escala-tabela td { border: 1px solid #000 !important; color: #000 !important; }
+            #escala-tabela th.bg-green-600 { background-color: #eee !important; color: #000 !important; font-weight: bold; }
+            #escala-tabela td.bg-purple-700 { background-color: #ddd !important; color: #000 !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            #escala-tabela td.bg-white { background-color: #fff !important; }
+            /* Esconde coluna de ações na impressão */
+            #escala-tabela th:last-child, #escala-tabela td:last-child { display: none; }
+            /* Remove scroll */
+            .overflow-x-auto { overflow: visible !important; max-height: none !important; }
+        }
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 min-h-screen">
@@ -128,6 +158,11 @@
                         class="tab-button px-6 py-3 font-medium text-gray-500 dark:text-gray-400 hover:text-[#5D5CDE] focus:outline-none" 
                         id="tab-funcionarios">
                     <i class="fas fa-users mr-2"></i>Funcionários
+                </button>
+                <button onclick="showTab('escala')" 
+                        class="tab-button px-6 py-3 font-medium text-gray-500 dark:text-gray-400 hover:text-[#5D5CDE] focus:outline-none" 
+                        id="tab-escala">
+                    <i class="fas fa-calendar-week mr-2"></i>Escala
                 </button>
                 <button onclick="showTab('registro')" 
                         class="tab-button px-6 py-3 font-medium text-gray-500 dark:text-gray-400 hover:text-[#5D5CDE] focus:outline-none" 
@@ -498,6 +533,73 @@
                         <tbody id="funcionarios-table" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                             <!-- Funcionários serão inseridos via JavaScript -->
                         </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Escala Tab -->
+        <div id="escala-content" class="tab-content">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+                <div class="flex flex-col md:flex-row items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                            Escala de Folgas
+                        </h2>
+                        <p class="text-gray-600 dark:text-gray-400 mt-2">Gerencie escalas 6x1, 5x1 e 4x2</p>
+                    </div>
+                    <div class="flex items-center gap-3 mt-4 md:mt-0">
+                        <button onclick="abrirModalEscala()" class="px-4 py-2 bg-[#5D5CDE] text-white rounded-lg hover:bg-[#4A4BC9] transition duration-200">
+                            <i class="fas fa-plus-circle mr-2"></i>Nova Escala
+                        </button>
+                        <button onclick="abrirModalEditarEscala()" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition duration-200">
+                            <i class="fas fa-edit mr-2"></i>Editar
+                        </button>
+                        <button onclick="excluirEscalaAtual()" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition duration-200">
+                            <i class="fas fa-trash-alt mr-2"></i>Excluir
+                        </button>
+                    </div>
+                </div>
+                <div class="flex flex-col md:flex-row items-end gap-4 mb-6">
+                    <div class="flex-1 w-full">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Selecione a Escala</label>
+                        <select id="select-escala" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#5D5CDE] dark:bg-gray-700 dark:text-white">
+                            <option value="">Selecione uma escala</option>
+                        </select>
+                    </div>
+                    <div class="w-full md:w-auto flex flex-wrap gap-2">
+                        <input type="file" id="import-escala-file" accept=".csv,.xlsx,.xls,.pdf,.png,.jpg,.jpeg" class="hidden" onchange="processarImportacaoEscala(this)">
+                        <button onclick="document.getElementById('import-escala-file').click()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200" title="Importar CSV/Excel/PDF/Imagem">
+                            <i class="fas fa-file-import mr-2"></i>Importar
+                        </button>
+                        <button onclick="imprimirEscala()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white transition duration-200">
+                            <i class="fas fa-print mr-2"></i>Imprimir
+                        </button>
+                        <button onclick="abrirModalConfigurarHorarios()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition duration-200" title="Configurar horários dos turnos">
+                            <i class="fas fa-clock mr-2"></i>Horários
+                        </button>
+                        <button onclick="exportarEscalaExcel()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-200">
+                            <i class="fas fa-file-excel mr-2"></i>Excel
+                        </button>
+                        <button onclick="abrirModalAdicionarFuncionarioEscala()" class="px-4 py-2 bg-[#5D5CDE] text-white rounded-lg hover:bg-[#4A4BC9] transition duration-200">
+                            <i class="fas fa-user-plus mr-2"></i>Adicionar
+                        </button>
+                        <button id="btn-recarregar-escala" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white transition duration-200">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="escala-view" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                <div id="escala-header" class="mb-4">
+                    <h2 id="escala-titulo" class="text-xl font-semibold text-gray-900 dark:text-white">Nenhuma escala selecionada</h2>
+                    <p id="escala-subtitulo" class="text-gray-600 dark:text-gray-400 text-sm mt-1"></p>
+                </div>
+                <div class="overflow-x-auto max-h-[70vh]">
+                    <table id="escala-tabela" class="min-w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden grid-sticky">
+                        <thead id="escala-thead" class="bg-gray-50 dark:bg-gray-700"></thead>
+                        <tbody id="escala-tbody" class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800"></tbody>
                     </table>
                 </div>
             </div>
@@ -974,8 +1076,23 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Limpeza de Dados -->
+
+                <!-- Manutenção de Dados -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-database text-[#5D5CDE] mr-2"></i>Manutenção de Dados
+                    </h3>
+                    <div class="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                        <h4 class="font-medium text-yellow-800 dark:text-yellow-400 mb-2">Limpeza de Cache Local</h4>
+                        <p class="text-sm text-yellow-700 dark:text-yellow-300 mb-4">
+                            Se você estiver recebendo avisos de "Limite de armazenamento atingido", use esta opção para limpar o histórico de logs local e otimizar o espaço. Seus dados principais (funcionários, faltas, escalas) não serão apagados.
+                        </p>
+                        <button onclick="limparCacheLocal()" 
+                                class="bg-yellow-600 text-white py-2 px-4 rounded-lg hover:bg-yellow-700 transition duration-200">
+                            <i class="fas fa-broom mr-2"></i>Limpar Cache / Otimizar Espaço
+                        </button>
+                    </div>
+                </div>
                 
             </div>
         </div>
@@ -1141,6 +1258,167 @@
     </div>
 
     <!-- Modal de Cadastro de Funcionário -->
+    <!-- Modal Nova Escala -->
+    <div id="modal-escala" class="modal">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-2xl w-full p-6 mx-4">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Nova Escala</h3>
+                <button onclick="fecharModalEscala()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <form id="form-escala" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome da Escala</label>
+                    <input type="text" id="escala-nome" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data Inicial</label>
+                    <input type="date" id="escala-data-inicio" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Duração (dias)</label>
+                    <input type="number" id="escala-dias" value="14" min="7" max="60" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Padrão</label>
+                    <select id="escala-padrao" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                        <option value="6x1">6x1</option>
+                        <option value="5x1">5x1</option>
+                        <option value="4x2">4x2</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Responsável</label>
+                    <input type="text" id="escala-responsavel" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" placeholder="Opcional">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Buscar Funcionário</label>
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" id="create-escala-busca" placeholder="Digite matrícula ou nome..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Funcionários (Ctrl/Cmd + clique para múltiplos)</label>
+                    <select id="escala-funcionarios" multiple size="10" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm font-mono"></select>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Dica: pesquise com Ctrl+F para localizar por nome</p>
+                </div>
+                <div class="md:col-span-2 flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700 mt-2">
+                    <button type="button" onclick="fecharModalEscala()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition duration-200">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-[#5D5CDE] text-white rounded-lg hover:bg-[#4A4BC9] transition duration-200">
+                        <i class="fas fa-save mr-2"></i>Salvar Escala
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Editar Escala -->
+    <div id="modal-editar-escala" class="modal">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-2xl w-full p-6 mx-4">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Editar Escala</h3>
+                <button onclick="fecharModalEditarEscala()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <form id="form-editar-escala" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="hidden" id="edit-escala-id">
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome da Escala</label>
+                    <input type="text" id="edit-escala-nome" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data Inicial</label>
+                    <input type="date" id="edit-escala-data-inicio" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Duração (dias)</label>
+                    <input type="number" id="edit-escala-dias" min="7" max="60" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Padrão</label>
+                    <select id="edit-escala-padrao" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                        <option value="6x1">6x1</option>
+                        <option value="5x1">5x1</option>
+                        <option value="4x2">4x2</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Responsável</label>
+                    <input type="text" id="edit-escala-responsavel" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                </div>
+                <div class="md:col-span-2 flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700 mt-2">
+                    <button type="button" onclick="fecharModalEditarEscala()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition duration-200">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition duration-200">
+                        <i class="fas fa-save mr-2"></i>Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Adicionar Funcionário à Escala -->
+    <div id="modal-add-func-escala" class="modal">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-md w-full p-6 mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Adicionar Funcionário à Escala</h3>
+                <button onclick="fecharModalAddFuncEscala()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <form onsubmit="salvarAddFuncEscala(event)">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Buscar por Matrícula ou Nome</label>
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" id="add-func-escala-busca" placeholder="Digite matrícula ou nome..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Selecione os funcionários</label>
+                    <select id="add-func-escala-select" multiple size="10" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm font-mono"></select>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Ctrl/Cmd + clique para múltiplos</p>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data da Última Folga</label>
+                    <input type="date" id="add-func-escala-ultima-folga" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">A escala será calculada automaticamente a partir desta data.</p>
+                </div>
+                <div class="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button type="button" onclick="fecharModalAddFuncEscala()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition duration-200">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-200">
+                        <i class="fas fa-plus mr-2"></i>Adicionar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Escolha: Folga extra ou Última folga (clique em dia de trabalho) -->
+    <div id="modal-escolha-folga" class="modal">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-sm w-full p-6 mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">O que deseja fazer?</h3>
+                <button onclick="fecharModalEscolhaFolga()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <p id="modal-escolha-folga-data" class="text-sm text-gray-600 dark:text-gray-400 mb-4"></p>
+            <div class="flex flex-col gap-2">
+                <button type="button" id="btn-folga-extra" class="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-left">
+                    <i class="fas fa-plus-circle mr-2"></i>Folga extra (reajuste)
+                </button>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Marca este dia como folga sem alterar o padrão da escala.</p>
+                <button type="button" id="btn-reajustar-escala" class="px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition text-left">
+                    <i class="fas fa-sync-alt mr-2"></i>Reajustar escala
+                </button>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Marca este dia como folga e recalcular as próximas folgas, mantendo as anteriores.</p>
+                <button type="button" id="btn-ultima-folga" class="px-4 py-3 bg-[#5D5CDE] text-white rounded-lg hover:bg-[#4A4BC9] transition text-left mt-2">
+                    <i class="fas fa-calendar-check mr-2"></i>Definir como última folga
+                </button>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Recalcula a escala inteira a partir desta data.</p>
+                <button type="button" onclick="fecharModalEscolhaFolga()" class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg mt-2">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Novo Funcionário -->
     <div id="modal-funcionario" class="modal">
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-lg w-full mx-4">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Cadastrar Funcionário</h3>
@@ -1190,6 +1468,7 @@
                             <option value="Turno A">Turno A </option>
                             <option value="Turno B ">Turno B</option>
                             <option value="Turno C ">Turno C</option>
+                            <option value="Folguista">Folguista</option>
                         </select>
                     </div>
                 </div>
@@ -1292,9 +1571,10 @@
                             <option value="">Selecione o turno</option>
                             <option value="Turno ADM 1">Turno ADM 1</option>
                             <option value="Turno ADM 2">Turno ADM 2</option>
-                            <option value="Turno A">Turno A </option>
+                            <option value="Turno A">Turno A</option>
                             <option value="Turno B ">Turno B</option>
                             <option value="Turno C ">Turno C</option>
+                            <option value="Folguista">Folguista</option>
                         </select>
                     </div>
                 </div>
@@ -1441,10 +1721,48 @@
                 localStorage.setItem(key, value);
             } catch (e) {
                 if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
-                    console.warn(`Local Storage quota exceeded for key "${key}". Data not saved locally.`, e);
-                    // Opcional: Tentar limpar dados antigos se for crítico, mas por enquanto apenas avisamos.
-                    // Em um app real, poderíamos implementar uma estratégia de LRU (Least Recently Used) aqui.
-                    showMessage('Aviso: Limite de armazenamento local atingido. Alguns dados offline podem não ser salvos, mas o banco de dados está seguro.', 'warning');
+                    console.warn(`Local Storage quota exceeded for key "${key}". Trying to clear old data...`, e);
+                    
+                    // Estratégia 1: Limpar histórico antigo
+                    try {
+                        const hStr = localStorage.getItem('historico');
+                        if (hStr) {
+                            let h = JSON.parse(hStr);
+                            if (h.length > 20) {
+                                h = h.slice(0, 20);
+                                localStorage.setItem('historico', JSON.stringify(h));
+                            } else if (key !== 'historico') {
+                                // Se histórico já é pequeno e não é ele que estamos salvando, removemos para dar espaço
+                                localStorage.removeItem('historico');
+                            }
+                        }
+                    } catch (err) {}
+
+                    // Tenta salvar novamente
+                    try {
+                        localStorage.setItem(key, value);
+                        console.log('Space freed. Saved successfully.');
+                        return;
+                    } catch(e2) {
+                        // Se ainda falhar, tenta truncar o próprio valor se for um array grande
+                        if (key === 'faltas' || key === 'historico' || key === 'escalas') {
+                            try {
+                                const valObj = JSON.parse(value);
+                                if (Array.isArray(valObj) && valObj.length > 50) {
+                                    // Salva apenas os últimos 50 registros
+                                    const truncated = valObj.slice(0, 50);
+                                    localStorage.setItem(key, JSON.stringify(truncated));
+                                    console.warn(`Saved truncated version of ${key} (50 items) due to quota.`);
+                                    // Apenas avisa no console para não spammar o usuário, já que o DB está seguro
+                                    return;
+                                }
+                            } catch(e3) {}
+                        }
+                    }
+
+                    // Se chegou aqui, realmente não deu
+                    console.error('Failed to save to localStorage even after cleanup.');
+                    showMessage('Aviso: Armazenamento local cheio. Limpe o cache do navegador se persistir.', 'warning');
                 } else {
                     console.error('Error saving to localStorage:', e);
                 }
@@ -2863,6 +3181,2547 @@
             }
         }
 
+        // ===== ESCALA DE FOLGAS =====
+        function getPadraoArray(padrao) {
+            if (!padrao) return [false,false,false,false,false,false,true]; // default 6x1
+            const [wStr, fStr] = padrao.toLowerCase().split('x');
+            const w = parseInt(wStr || '6', 10);
+            const f = parseInt(fStr || '1', 10);
+            return Array(w).fill(false).concat(Array(f).fill(true)); // false=trabalho, true=folga
+        }
+
+        // ===== ESCALAS DB =====
+        let escalasCache = []; // Cache local de escalas
+
+        async function carregarEscalas() {
+            if (!sb) return JSON.parse(localStorage.getItem('escalas') || '[]');
+            
+            try {
+                // Carrega escalas
+                const { data: escalasData, error: errEscalas } = await sb
+                    .from('escalas')
+                    .select('*')
+                    .order('nome');
+                
+                if (errEscalas) throw errEscalas;
+
+                // Carrega funcionários de todas as escalas
+                const { data: funcsData, error: errFuncs } = await sb
+                    .from('escala_funcionarios')
+                    .select('*');
+
+                if (errFuncs) throw errFuncs;
+
+                // Monta estrutura
+                const escalas = escalasData.map(e => {
+                    const funcionarios = funcsData
+                        .filter(f => f.escala_id === e.id)
+                        .map(f => {
+                            let folgasExtras = [];
+                            try {
+                                if (f.folgas_extras) folgasExtras = Array.isArray(f.folgas_extras) ? f.folgas_extras : JSON.parse(f.folgas_extras || '[]');
+                            } catch (_) {}
+                            return {
+                                matricula: f.matricula,
+                                ultimaFolga: f.ultima_folga,
+                                padrao: f.padrao,
+                                folgasExtras: folgasExtras
+                            };
+                        });
+                    
+                    return {
+                        id: e.id.toString(), // Mantém string para compatibilidade
+                        nome: e.nome,
+                        dataInicio: e.data_inicio,
+                        dias: e.dias,
+                        padrao: e.padrao,
+                        responsavel: e.responsavel,
+                        funcionarios: funcionarios
+                    };
+                });
+
+                escalasCache = escalas;
+                localStorage.setItem('escalas', JSON.stringify(escalas)); // Backup local
+                return escalas;
+            } catch (error) {
+                console.error('Erro ao carregar escalas do banco:', error);
+                // Fallback local
+                return JSON.parse(localStorage.getItem('escalas') || '[]');
+            }
+        }
+
+        async function salvarNovaEscalaDB(escala) {
+            if (!sb) return false;
+            try {
+                // 1. Salva Escala
+                const { data: escalaData, error: errEscala } = await sb
+                    .from('escalas')
+                    .insert({
+                        nome: escala.nome,
+                        data_inicio: escala.dataInicio,
+                        dias: escala.dias,
+                        padrao: escala.padrao,
+                        responsavel: escala.responsavel,
+                        user_id: session ? session.user.id : undefined
+                    })
+                    .select();
+
+                if (errEscala) throw errEscala;
+                const novaEscalaId = escalaData[0].id;
+
+                // 2. Salva Funcionários
+                if (escala.funcionarios && escala.funcionarios.length > 0) {
+                    const funcsInsert = escala.funcionarios.map(f => ({
+                        escala_id: novaEscalaId,
+                        matricula: parseInt(f.matricula),
+                        ultima_folga: f.ultimaFolga || null,
+                        padrao: f.padrao || null,
+                        folgas_extras: Array.isArray(f.folgasExtras) ? JSON.stringify(f.folgasExtras) : '[]'
+                    }));
+
+                    const { error: errFuncs } = await sb
+                        .from('escala_funcionarios')
+                        .insert(funcsInsert);
+
+                    if (errFuncs) throw errFuncs;
+                }
+
+                return true;
+            } catch (error) {
+                console.error('Erro ao salvar escala no banco:', error);
+                showMessage('Erro ao salvar escala no banco: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        async function atualizarEscalaDB(escala) {
+            if (!sb) return false;
+            try {
+                // Atualiza dados da escala
+                const { error: errEscala } = await sb
+                    .from('escalas')
+                    .update({
+                        nome: escala.nome,
+                        data_inicio: escala.dataInicio,
+                        dias: escala.dias,
+                        padrao: escala.padrao,
+                        responsavel: escala.responsavel
+                    })
+                    .eq('id', parseInt(escala.id));
+
+                if (errEscala) throw errEscala;
+                return true;
+            } catch (error) {
+                console.error('Erro ao atualizar escala:', error);
+                return false;
+            }
+        }
+
+        async function excluirEscalaDB(escalaId) {
+            if (!sb) return false;
+            try {
+                const { error } = await sb.from('escalas').delete().eq('id', parseInt(escalaId));
+                if (error) throw error;
+                return true;
+            } catch (error) {
+                console.error('Erro ao excluir escala:', error);
+                return false;
+            }
+        }
+
+        // Funções para manipulação de funcionários individuais (mais eficientes que regravar tudo)
+        async function adicionarFuncionarioEscalaDB(escalaId, funcionario) {
+            if (!sb) return false;
+            try {
+                const { error } = await sb
+                    .from('escala_funcionarios')
+                    .insert({
+                        escala_id: parseInt(escalaId),
+                        matricula: parseInt(funcionario.matricula),
+                        ultima_folga: funcionario.ultimaFolga,
+                        padrao: funcionario.padrao,
+                        folgas_extras: typeof funcionario.folgasExtras !== 'undefined' ? JSON.stringify(funcionario.folgasExtras) : '[]'
+                    });
+                if (error) throw error;
+                return true;
+            } catch (error) {
+                console.error('Erro ao add func escala:', error);
+                return false;
+            }
+        }
+
+        async function removerFuncionarioEscalaDB(escalaId, matricula) {
+            if (!sb) return false;
+            try {
+                const { error } = await sb
+                    .from('escala_funcionarios')
+                    .delete()
+                    .match({ escala_id: parseInt(escalaId), matricula: parseInt(matricula) });
+                if (error) throw error;
+                return true;
+            } catch (error) {
+                console.error('Erro ao remover func escala:', error);
+                return false;
+            }
+        }
+
+        async function atualizarFuncionarioEscalaDB(escalaId, matricula, dados) {
+            if (!sb) return false;
+            try {
+                const updateData = {};
+                if (dados.ultimaFolga !== undefined) updateData.ultima_folga = dados.ultimaFolga;
+                if (dados.padrao !== undefined) updateData.padrao = dados.padrao;
+                if (dados.folgasExtras !== undefined) updateData.folgas_extras = typeof dados.folgasExtras === 'string' ? dados.folgasExtras : JSON.stringify(dados.folgasExtras || []);
+
+                const { error } = await sb
+                    .from('escala_funcionarios')
+                    .update(updateData)
+                    .match({ escala_id: parseInt(escalaId), matricula: parseInt(matricula) });
+                if (error) throw error;
+                return true;
+            } catch (error) {
+                console.error('Erro ao atualizar func escala:', error);
+                return false;
+            }
+        }
+
+        // Wrappers compatíveis com o código existente
+        function carregarEscalasLocal() {
+            return escalasCache;
+        }
+
+        function salvarEscalasLocal(escalas) {
+            escalasCache = escalas;
+            localStorage.setItem('escalas', JSON.stringify(escalas));
+        }
+
+        function popularFuncionariosSelectEscala() {
+            const select = document.getElementById('escala-funcionarios');
+            if (!select) return;
+            
+            // Armazena selecionados para não perder ao filtrar
+            let selecionadosSet = new Set(Array.from(select.selectedOptions).map(o => o.value));
+
+            // Função para filtrar e renderizar a lista
+            const renderOpcoes = (termo = '') => {
+                select.innerHTML = '';
+                const termoLower = termo.toLowerCase();
+                const funcs = funcionarios.slice().sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
+                
+                const filtrados = funcs.filter(f => 
+                    String(f.cadastro).includes(termoLower) || 
+                    (f.nome || '').toLowerCase().includes(termoLower)
+                );
+                
+                filtrados.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f.cadastro;
+                    opt.textContent = `${f.cadastro} - ${f.nome}`;
+                    if (selecionadosSet.has(String(f.cadastro))) opt.selected = true;
+                    select.appendChild(opt);
+                });
+            };
+
+            // Renderiza inicial
+            renderOpcoes();
+
+            // Configura a busca
+            const inputBusca = document.getElementById('create-escala-busca');
+            if (inputBusca) {
+                inputBusca.value = '';
+                const novoInput = inputBusca.cloneNode(true);
+                inputBusca.parentNode.replaceChild(novoInput, inputBusca);
+                
+                novoInput.addEventListener('input', (e) => {
+                    // Atualiza set de selecionados antes de filtrar
+                    Array.from(select.selectedOptions).forEach(o => selecionadosSet.add(o.value));
+                    renderOpcoes(e.target.value);
+                });
+                
+                novoInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const valor = novoInput.value.trim();
+                        if (!valor) return;
+
+                        // Tenta achar correspondência exata ou primeiro da lista
+                        let matchIndex = -1;
+                        for(let i=0; i<select.options.length; i++) {
+                            // Prioridade para matrícula exata
+                            if (select.options[i].value === valor) {
+                                matchIndex = i;
+                                break;
+                            }
+                        }
+                        // Se não achou exata, pega o primeiro da lista filtrada
+                        if (matchIndex === -1 && select.options.length > 0) {
+                            matchIndex = 0;
+                        }
+
+                        if (matchIndex !== -1) {
+                            const opt = select.options[matchIndex];
+                            opt.selected = true; // Adiciona à seleção (não substitui)
+                            selecionadosSet.add(opt.value);
+                            
+                            // Limpa busca e mostra todos novamente mantendo seleções
+                            novoInput.value = '';
+                            renderOpcoes('');
+                        }
+                    }
+                });
+                setTimeout(() => novoInput.focus(), 100);
+            }
+            
+            // Atualiza set quando usuário clica manualmente
+            select.addEventListener('change', () => {
+                 Array.from(select.options).forEach(o => {
+                     if (o.selected) selecionadosSet.add(o.value);
+                     else selecionadosSet.delete(o.value); // Remove se desmarcado (apenas se visível)
+                 });
+            });
+        }
+
+        async function renderSelectEscalas() {
+            const select = document.getElementById('select-escala');
+            if (!select) return;
+            
+            // Carrega escalas (agora é async)
+            const escalas = await carregarEscalas();
+            
+            // Verifica se é array válido antes de iterar
+            if (!Array.isArray(escalas)) {
+                console.error('Erro: carregarEscalas não retornou um array.', escalas);
+                return;
+            }
+
+            const current = select.value;
+            select.innerHTML = '<option value="">Selecione uma escala</option>';
+            
+            escalas.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.id;
+                opt.textContent = `${e.nome} • ${e.dataInicio} • ${e.padrao} (${e.dias}d)`;
+                select.appendChild(opt);
+            });
+            
+            if (current && escalas.find(e => e.id === current)) select.value = current;
+            else if (escalas.length) select.value = escalas[escalas.length-1].id;
+        }
+
+        function renderGridEscala(escala) {
+            console.log('=== INÍCIO renderGridEscala ===');
+            console.log('Escala recebida:', escala);
+            
+            const thead = document.getElementById('escala-thead');
+            const tbody = document.getElementById('escala-tbody');
+            const titulo = document.getElementById('escala-titulo');
+            const sub = document.getElementById('escala-subtitulo');
+
+            if (!thead || !tbody || !titulo || !sub) {
+                console.error('Elementos da tabela não encontrados!');
+                return;
+            }
+
+            if (!escala) {
+                console.log('Escala vazia, limpando tabela');
+                titulo.textContent = 'Nenhuma escala selecionada';
+                sub.textContent = '';
+                thead.innerHTML = '';
+                tbody.innerHTML = '';
+                return;
+            }
+
+            // Debug: Log the scale data
+            console.log('Renderizando escala:', escala);
+            console.log('Funcionários na escala:', escala.funcionarios);
+
+            titulo.textContent = escala.nome;
+            sub.textContent = `Período: ${escala.dataInicio.split('-').reverse().join('/')} • Duração: ${escala.dias} dias • Padrão: ${escala.padrao}${escala.responsavel ? ' • Resp.: ' + escala.responsavel : ''}`;
+
+            const start = new Date(escala.dataInicio + 'T00:00:00');
+            const dias = parseInt(escala.dias, 10) || 14;
+
+            // Cabeçalho
+            let h1 = '<tr class="bg-green-600 text-white">';
+            h1 += '<th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-wider sticky left-0 z-20 bg-green-600 border-r border-green-500">EQUIP</th>';
+            h1 += '<th class="px-3 py-2 text-center text-xs font-bold uppercase tracking-wider sticky left-24 z-20 bg-green-600 border-r border-green-500">I.D.</th>';
+            h1 += '<th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-wider sticky left-40 z-20 bg-green-600 border-r border-green-500 min-w-[200px]">COLABORADOR</th>';
+            h1 += '<th class="px-3 py-2 text-center text-xs font-bold uppercase tracking-wider bg-green-600 border-r border-green-500">TURNO</th>';
+            h1 += '<th class="px-3 py-2 text-center text-xs font-bold uppercase tracking-wider bg-green-600 border-r border-green-500">HORÁRIO</th>';
+            h1 += '<th class="px-3 py-2 text-center text-xs font-bold uppercase tracking-wider bg-green-600 border-r border-green-500">ESCALA</th>';
+            h1 += '<th class="px-3 py-2 text-center text-xs font-bold uppercase tracking-wider bg-green-600 border-r border-green-500">RESPONSÁVEL</th>';
+            
+            const diasSemana = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+            
+            for (let i=0;i<dias;i++) {
+                const d = new Date(start); d.setDate(start.getDate() + i);
+                const diaSem = diasSemana[d.getDay()];
+                const isFimSemana = d.getDay() === 0 || d.getDay() === 6;
+                // Cabeçalho dos dias estilo planilha
+                h1 += `<th class="px-1 py-1 text-xs font-bold text-center border-l border-green-500 min-w-[40px]">
+                    <div class="text-[10px] uppercase">${diaSem}</div>
+                    <div class="text-[10px] font-normal">${d.getDate()}-${d.toLocaleString('pt-BR', { month: 'short' }).replace('.','')}</div>
+                </th>`;
+            }
+            h1 += '<th class="px-2 py-2 text-center text-xs font-bold uppercase bg-green-600 sticky right-0 z-20">Ações</th>';
+            h1 += '</tr>';
+            thead.innerHTML = h1;
+
+            // Linhas
+            const funcs = funcionarios;
+            // Normaliza para array de objetos { matricula, ultimaFolga, folgasExtras }
+            const selecionados = (escala.funcionarios || []).map(item => {
+                const obj = typeof item === 'object' ? item : { matricula: String(item), ultimaFolga: null, padrao: null };
+                if (!Array.isArray(obj.folgasExtras)) obj.folgasExtras = [];
+                return obj;
+            });
+            
+            // Ordenar por turno: Turno A primeiro, depois os outros em ordem alfabética
+            const selecionadosOrdenados = selecionados.sort((a, b) => {
+                const matriculaStrA = String(a.matricula);
+                const matriculaStrB = String(b.matricula);
+                const funcA = funcs.find(x => String(x.cadastro) === matriculaStrA);
+                const funcB = funcs.find(x => String(x.cadastro) === matriculaStrB);
+                const turnoA = funcA ? (funcA.turno || '') : '';
+                const turnoB = funcB ? (funcB.turno || '') : '';
+                
+                // Prioridade: Turno A > Turno B > Turno C > Folguista > Turno ADM 1 > Turno ADM 2 > outros
+                const ordemTurno = {
+                    'Turno A': 1,
+                    'Turno B': 2, 
+                    'Turno C': 3,
+                    'Folguista': 4,
+                    'Turno ADM 1': 5,
+                    'Turno ADM 2': 6
+                };
+                
+                const prioridadeA = ordemTurno[turnoA] || 999;
+                const prioridadeB = ordemTurno[turnoB] || 999;
+                
+                if (prioridadeA !== prioridadeB) {
+                    return prioridadeA - prioridadeB;
+                }
+                
+                // Se mesmo turno, ordena por nome
+                const nomeA = funcA ? funcA.nome : `Matrícula ${matriculaStrA}`;
+                const nomeB = funcB ? funcB.nome : `Matrícula ${matriculaStrB}`;
+                return nomeA.localeCompare(nomeB);
+            });
+            
+            const rows = [];
+            
+            console.log('Processando', selecionadosOrdenados.length, 'funcionários ordenados por turno');
+            
+            selecionadosOrdenados.forEach((item, idx) => {
+                const matriculaStr = String(item.matricula);
+                const f = funcs.find(x => String(x.cadastro) === matriculaStr);
+                const nome = f ? f.nome : `Matrícula ${matriculaStr}`;
+                const equipe = f ? (f.descricaoLocal || f.frente || '-') : '-';
+                const turno = f ? (f.turno || '-') : '-';
+                const responsavel = f ? (f.lider || '-') : '-';
+                const padraoFunc = item.padrao || escala.padrao || '6x1';
+                
+                // Definir horário conforme o turno
+                let horario = obterHorarioTurno(turno); 
+
+                // Debug: Log employee data
+                console.log(`Funcionário ${matriculaStr}:`, {
+                    ultimaFolga: item.ultimaFolga,
+                    folgasExtras: item.folgasExtras,
+                    padrao: padraoFunc
+                });
+
+                let row = `<tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700 group">
+                    <td class="px-2 py-1 text-xs text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-700 sticky left-0 bg-blue-100 dark:bg-blue-900 z-10 font-semibold truncate max-w-[100px]" title="${equipe}">${equipe}</td>
+                    <td class="px-2 py-1 text-xs text-center text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700 sticky left-24 bg-white dark:bg-gray-800 z-10 font-mono">${matriculaStr}</td>
+                    <td class="px-2 py-1 text-xs text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700 sticky left-40 bg-white dark:bg-gray-800 z-10 truncate max-w-[200px] font-medium" title="${nome}">${nome}</td>
+                    <td class="px-2 py-1 text-xs text-center font-bold text-gray-800 dark:text-gray-200 border-r border-gray-200 dark:border-gray-700">${turno}</td>
+                    <td class="px-2 py-1 text-xs text-center text-gray-600 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">${horario}</td>
+                    <td onclick="alterarPadraoFuncionario('${escala.id}', '${matriculaStr}')" class="px-2 py-1 text-xs text-center text-blue-600 dark:text-blue-400 font-bold border-r border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors" title="Clique para alterar o padrão de escala deste funcionário">${padraoFunc}</td>
+                    <td class="px-2 py-1 text-xs text-center text-gray-600 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700 truncate max-w-[100px]" title="${responsavel}">${responsavel}</td>`;
+                
+                // Cálculo de folga baseado na última folga informada e padrão individual (6x1, 5x1, 4x2, 12x36...)
+                const cycle = getPadraoArray(padraoFunc);
+                const cycleLen = cycle.length;
+                const msPorDia = 1000 * 60 * 60 * 24;
+                const dayNum = (d) => Math.round((d.getTime() - start.getTime()) / msPorDia);
+
+                // Quando tem última folga: alinha o ciclo assumindo que ultima_folga é o ÚLTIMO dia de folga do ciclo
+                let cycleStartDayNum = null;
+                if (item.ultimaFolga) {
+                    const ultima = new Date(item.ultimaFolga + 'T00:00:00');
+                    const ultimaDayNum = dayNum(ultima);
+                    cycleStartDayNum = ultimaDayNum - (cycleLen - 1);
+                    console.log(`Funcionário ${matriculaStr}: última folga em ${item.ultimaFolga}, cycleStartDayNum = ${cycleStartDayNum}`);
+                }
+
+                const folgasExtras = item.folgasExtras || [];
+                console.log(`Funcionário ${matriculaStr}: folgasExtras existentes =`, folgasExtras);
+                console.log(`Funcionário ${matriculaStr}: ultimaFolga =`, item.ultimaFolga);
+
+                for (let i=0;i<dias;i++) {
+                    const currentDay = new Date(start); 
+                    currentDay.setDate(start.getDate() + i);
+                    const dateStr = currentDay.toISOString().split('T')[0];
+                    
+                    let isFolgaPelaEscala = false;
+                    let isFolgaExtra = folgasExtras.includes(dateStr);
+                    let isFolga = isFolgaExtra; // Por padrão, só é folga se for extra
+                    
+                    // Se tem ultimaFolga, recalcula as folgas a partir dessa data
+                    if (item.ultimaFolga && cycleStartDayNum !== null) {
+                        const currentDayNum = dayNum(currentDay);
+                        
+                        // Se a data atual é posterior ou igual à ultimaFolga, recalcula
+                        if (currentDayNum >= cycleStartDayNum) {
+                            const dayInCycle = ((currentDayNum - cycleStartDayNum) % cycleLen + cycleLen) % cycleLen;
+                            isFolgaPelaEscala = cycle[dayInCycle];
+                            isFolga = isFolgaPelaEscala || isFolgaExtra;
+                            console.log(`Data ${dateStr} (POSTERIOR): isFolgaPelaEscala=${isFolgaPelaEscala}, isFolgaExtra=${isFolgaExtra}, isFolga=${isFolga}`);
+                        }
+                        // Se for anterior, mantém só as folgas extras (não recalcula)
+                    } else if (!item.ultimaFolga) {
+                        // Se não tem ultimaFolga, usa o cálculo normal
+                        const offset = idx % cycleLen;
+                        isFolgaPelaEscala = cycle[(i + offset) % cycleLen];
+                        isFolga = isFolgaPelaEscala || isFolgaExtra;
+                        console.log(`Data ${dateStr} (SEM ULTIMAFOLGA): isFolgaPelaEscala=${isFolgaPelaEscala}, isFolgaExtra=${isFolgaExtra}, isFolga=${isFolga}`);
+                    } else {
+                        // Tem ultimaFolga mas data é anterior - mantém só folga extra
+                        console.log(`Data ${dateStr} (ANTERIOR): mantendo só isFolgaExtra=${isFolgaExtra}`);
+                    }
+
+                    // Debug: Log folga calculation
+                    if (dateStr === '2026-03-07' || dateStr === '2026-03-08') {
+                        console.log(`Data ${dateStr}: isFolgaPelaEscala=${isFolgaPelaEscala}, isFolgaExtra=${isFolgaExtra}, isFolga=${isFolga}, currentDayNum=${dayNum(currentDay)}, cycleStartDayNum=${cycleStartDayNum}`);
+                    }
+
+                    const esc = escala.id.replace(/'/g, "\\'");
+                    const dat = dateStr.replace(/'/g, "\\'");
+                    if (isFolga) {
+                        const title = isFolgaExtra ? 'Clique para remover folga extra (reajuste)' : 'Clique para redefinir última folga';
+                        const fn = isFolgaExtra ? `removerFolgaExtra('${esc}', '${matriculaStr}', '${dat}')` : `definirUltimaFolga('${esc}', '${matriculaStr}', '${dat}')`;
+                        row += `<td class="px-1 py-1 text-center bg-purple-700 text-white font-bold text-xs border border-gray-300 dark:border-gray-600 cursor-pointer hover:bg-purple-600 transition-colors" title="${title}" onclick="${fn}">F</td>`;
+                    } else {
+                        row += `<td class="px-1 py-1 text-center bg-white dark:bg-gray-800 text-xs border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Clique: folga extra (reajuste) ou definir última folga" onclick="abrirModalEscolhaFolga('${esc}', '${matriculaStr}', '${dat}')"></td>`;
+                    }
+                }
+                
+                // Botão de remover
+                row += `<td class="px-2 py-1 text-center sticky right-0 bg-white dark:bg-gray-800 z-10 border-l border-gray-200 dark:border-gray-700">
+                    <button onclick="removerFuncionarioEscala('${escala.id}', '${matriculaStr}')" class="text-red-500 hover:text-red-700 p-1" title="Remover da escala">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>`;
+                
+                row += '</tr>';
+                rows.push(row);
+            });
+            
+            console.log('Renderizadas', rows.length, 'linhas');
+            tbody.innerHTML = rows.join('');
+            console.log('=== FIM renderGridEscala ===');
+        }
+
+        function alterarPadraoFuncionario(escalaId, matricula) {
+            const escalas = carregarEscalas();
+            const escalaIndex = escalas.findIndex(e => e.id === escalaId);
+            if (escalaIndex === -1) return;
+            const escala = escalas[escalaIndex];
+            const funcIndex = escala.funcionarios.findIndex(f => {
+                const mat = typeof f === 'object' ? f.matricula : f;
+                return String(mat) === String(matricula);
+            });
+            if (funcIndex === -1) return;
+
+            // Normaliza objeto
+            if (typeof escala.funcionarios[funcIndex] !== 'object') {
+                escala.funcionarios[funcIndex] = { matricula: escala.funcionarios[funcIndex], ultimaFolga: null };
+            }
+
+            const currentPadrao = escala.funcionarios[funcIndex].padrao || escala.padrao;
+            const novoPadrao = prompt(`Digite o novo padrão de escala para este funcionário (ex: 6x1, 5x1, 4x2, 12x36):\nAtual: ${currentPadrao}`, currentPadrao);
+
+            if (novoPadrao !== null) { // Permite string vazia para resetar ao padrão da escala
+                if (novoPadrao.trim() === '') {
+                     delete escala.funcionarios[funcIndex].padrao; // Remove override
+                     showMessage(`Padrão resetado para o da escala (${escala.padrao})`, 'success');
+                } else if (!novoPadrao.includes('x')) {
+                    alert('Formato inválido! Use o formato NxN (ex: 6x1)');
+                    return;
+                } else {
+                    escala.funcionarios[funcIndex].padrao = novoPadrao.trim();
+                    showMessage(`Padrão alterado para ${novoPadrao.trim()} com sucesso!`, 'success');
+                }
+                salvarEscalas(escalas);
+                renderGridEscala(escala);
+            }
+        }
+
+        function definirUltimaFolga(escalaId, matricula, dataISO) {
+            const dataExibicao = dataISO.split('-').reverse().join('/');
+            if (!confirm(`DEFINIR ÚLTIMA FOLGA?\n\nVocê está definindo o dia ${dataExibicao} como a ÚLTIMA FOLGA deste funcionário.\n\nO sistema irá calcular automaticamente as PRÓXIMAS folgas somando o ciclo da escala a partir desta data.\n\nDeseja continuar?`)) return;
+
+            const escalas = carregarEscalas();
+            const escalaIndex = escalas.findIndex(e => e.id === escalaId);
+            if (escalaIndex === -1) return;
+            const escala = escalas[escalaIndex];
+
+            const funcIndex = escala.funcionarios.findIndex(f => {
+                const mat = typeof f === 'object' ? f.matricula : f;
+                return String(mat) === String(matricula);
+            });
+
+            if (funcIndex !== -1) {
+                // Converte para objeto se ainda for string/number antigo
+                if (typeof escala.funcionarios[funcIndex] !== 'object') {
+                    escala.funcionarios[funcIndex] = { matricula: escala.funcionarios[funcIndex], ultimaFolga: null };
+                }
+                
+                escala.funcionarios[funcIndex].ultimaFolga = dataISO;
+                salvarEscalas(escalas);
+                
+                // Recarrega a grade com a escala atualizada
+                renderGridEscala(escala);
+                showMessage(`Folga base definida em ${dataExibicao}. Escala recalculada!`, 'success');
+            }
+        }
+
+        function removerFuncionarioEscala(escalaId, matricula) {
+            if (!confirm('Remover funcionário desta escala?')) return;
+            const escalas = carregarEscalas();
+            const escala = escalas.find(e => e.id === escalaId);
+            if (escala) {
+                escala.funcionarios = escala.funcionarios.filter(m => String(m) !== String(matricula));
+                salvarEscalas(escalas);
+                renderGridEscala(escala);
+                showMessage('Funcionário removido da escala.', 'success');
+            }
+        }
+
+        function imprimirEscala() {
+            const select = document.getElementById('select-escala');
+            if (!select || !select.value) {
+                showMessage('Selecione uma escala para imprimir.', 'warning');
+                return;
+            }
+            
+            const originalTitle = document.title;
+            const escalaNome = document.getElementById('escala-titulo').textContent;
+            const periodo = getPeriodoEscala();
+            
+            // Criar cabeçalho de impressão
+            const headerDiv = document.createElement('div');
+            headerDiv.id = 'print-header';
+            headerDiv.style.cssText = `
+                text-align: center;
+                margin-bottom: 20px;
+                padding: 20px 0;
+                border-bottom: 2px solid #333;
+            `;
+            headerDiv.innerHTML = `
+                <h1 style="margin: 0; font-size: 18px; font-weight: bold; color: #333;">USINA CAMBUÍ</h1>
+                <p style="margin: 5px 0; font-size: 14px; font-weight: bold;">ESCALA MENSAL DE TRABALHO</p>
+                <p style="margin: 5px 0; font-size: 12px;">PERÍODO: ${periodo}</p>
+                <p style="margin: 5px 0; font-size: 11px;">DATA: ${new Date().toLocaleDateString('pt-BR')}</p>
+            `;
+            
+            // Inserir cabeçalho antes da tabela
+            const table = document.getElementById('escala-tabela');
+            const tableContainer = table.parentElement;
+            tableContainer.insertBefore(headerDiv, tableContainer.firstChild);
+            
+            // Adicionar estilos de impressão
+            const style = document.createElement('style');
+            style.id = 'print-styles';
+            style.textContent = `
+                @media print {
+                    @page {
+                        margin: 1cm;
+                        size: landscape;
+                    }
+                    
+                    body * {
+                        visibility: hidden;
+                    }
+                    
+                    #print-header,
+                    #print-header *,
+                    #escala-tabela,
+                    #escala-tabela * {
+                        visibility: visible;
+                    }
+                    
+                    body {
+                        font-family: Arial, sans-serif;
+                        font-size: 8px;
+                        line-height: 1.1;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                        background: white !important;
+                        color: black !important;
+                    }
+                    
+                    #print-header {
+                        position: absolute;
+                        top: 10px;
+                        left: 0;
+                        width: 100%;
+                        text-align: center;
+                        margin-bottom: 20px;
+                    }
+                    
+                    #escala-tabela {
+                        position: absolute;
+                        top: 80px;
+                        left: 0;
+                        width: 100% !important;
+                        border-collapse: collapse !important;
+                        font-size: 6px !important;
+                        table-layout: fixed;
+                    }
+                    
+                    #escala-tabela th {
+                        border: 1px solid #333 !important;
+                        padding: 2px 1px !important;
+                        text-align: center !important;
+                        vertical-align: middle !important;
+                        background-color: #f0f0f0 !important;
+                        font-weight: bold !important;
+                        font-size: 6px !important;
+                        height: 15px !important;
+                    }
+                    
+                    #escala-tabela td {
+                        border: 1px solid #666 !important;
+                        padding: 1px !important;
+                        text-align: center !important;
+                        vertical-align: middle !important;
+                        font-size: 5px !important;
+                        height: 12px !important;
+                    }
+                    
+                    /* Coluna MAT */
+                    #escala-tabela td:nth-child(1),
+                    #escala-tabela th:nth-child(1) {
+                        width: 35px !important;
+                        font-weight: bold !important;
+                        font-size: 5px !important;
+                    }
+                    
+                    /* Coluna NOME - maior para mostrar nome completo */
+                    #escala-tabela td:nth-child(2),
+                    #escala-tabela th:nth-child(2) {
+                        width: 150px !important;
+                        min-width: 150px !important;
+                        max-width: 200px !important;
+                        text-align: left !important;
+                        font-weight: bold !important;
+                        font-size: 6px !important;
+                        text-transform: uppercase !important;
+                        padding: 2px 6px !important;
+                        white-space: normal !important;
+                        overflow: visible !important;
+                        word-wrap: break-word !important;
+                        line-height: 1.2 !important;
+                    }
+                    
+                    /* Coluna TURNO */
+                    #escala-tabela td:nth-child(3),
+                    #escala-tabela th:nth-child(3) {
+                        width: 25px !important;
+                        font-weight: bold !important;
+                        font-size: 5px !important;
+                    }
+                    
+                    /* Coluna ESCALA */
+                    #escala-tabela td:nth-child(4),
+                    #escala-tabela th:nth-child(4) {
+                        width: 25px !important;
+                        font-weight: bold !important;
+                        font-size: 5px !important;
+                    }
+                    
+                    /* Colunas de dias - mais compactas para compensar */
+                    #escala-tabela td:nth-child(n+5),
+                    #escala-tabela th:nth-child(n+5) {
+                        width: 12px !important;
+                        font-size: 4px !important;
+                        padding: 1px !important;
+                    }
+                    
+                    /* Coluna AÇÕES - esconder */
+                    #escala-tabela td:last-child,
+                    #escala-tabela th:last-child {
+                        display: none !important;
+                    }
+                    
+                    /* Folgas destacadas */
+                    #escala-tabela td.bg-purple-700 {
+                        background-color: #70AD47 !important;
+                        color: white !important;
+                        font-weight: bold !important;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // Adicionar classe de impressão
+            document.body.classList.add('printing-escala');
+            document.title = `Escala - ${escalaNome}`;
+            
+            // Imprimir
+            window.print();
+            
+            // Limpar após impressão
+            setTimeout(() => {
+                // Remover cabeçalho
+                const header = document.getElementById('print-header');
+                if (header) header.remove();
+                
+                // Remover estilos
+                const printStyles = document.getElementById('print-styles');
+                if (printStyles) printStyles.remove();
+                
+                // Remover classe e restaurar título
+                document.body.classList.remove('printing-escala');
+                document.title = originalTitle;
+            }, 100);
+        }
+
+        // Funções auxiliares para exportação Excel
+        function obterHorarioTurno(turno) {
+            console.log('Obtendo horário para turno:', JSON.stringify(turno));
+            console.log('Tipo:', typeof turno);
+            console.log('Length:', turno ? turno.length : 'null');
+            
+            // Normalizar o nome do turno (remover espaços extras)
+            const turnoNormalizado = turno ? turno.trim() : '';
+            console.log('Turno normalizado:', JSON.stringify(turnoNormalizado));
+            
+            // Obter horários configurados ou usar padrões
+            const horariosPadrao = {
+                'Turno A': '07:00/15:20',
+                'Turno B': '15:00/23:20', 
+                'Turno C': '23:00/07:00',
+                'Turno ADM 1': '08:00/17:00',
+                'Turno ADM 2': '08:00/17:00',
+                'Folguista': 'Folguista'
+            };
+            
+            // Tentar obter horários personalizados do localStorage
+            const horariosPersonalizados = localStorage.getItem('horariosTurnos');
+            console.log('Horários no localStorage:', horariosPersonalizados);
+            
+            if (horariosPersonalizados) {
+                const horarios = JSON.parse(horariosPersonalizados);
+                console.log('Horários parseados:', horarios);
+                console.log('Chaves disponíveis:', Object.keys(horarios));
+                console.log('Horário para', JSON.stringify(turnoNormalizado), ':', horarios[turnoNormalizado]);
+                
+                // Tentar encontrar o horário com diferentes variações
+                let resultado = horarios[turnoNormalizado];
+                if (!resultado) {
+                    console.log('Não encontrado com nome normalizado, tentando original...');
+                    resultado = horarios[turno];
+                }
+                if (!resultado) {
+                    console.log('Não encontrado, tentando sem espaços...');
+                    resultado = horarios[turno.replace(/\s+/g, ' ')];
+                }
+                if (!resultado) {
+                    console.log('Não encontrado, usando padrão...');
+                    resultado = horariosPadrao[turnoNormalizado] || horariosPadrao[turno] || '07:00/15:20';
+                }
+                
+                console.log('Resultado final:', resultado);
+                return resultado;
+            }
+            
+            console.log('Usando horário padrão para', JSON.stringify(turnoNormalizado), ':', horariosPadrao[turnoNormalizado]);
+            return horariosPadrao[turnoNormalizado] || '07:00/15:20';
+        }
+        
+        function salvarHorariosTurnos(horarios) {
+            localStorage.setItem('horariosTurnos', JSON.stringify(horarios));
+            showMessage('Horários dos turnos atualizados com sucesso!', 'success');
+        }
+        
+        function abrirModalConfigurarHorarios() {
+            try {
+                console.log('Abrindo modal de configuração de horários...');
+                const modal = document.getElementById('modal-configurar-horarios');
+                if (!modal) {
+                    // Criar modal se não existir
+                    console.log('Modal não encontrado, criando...');
+                    criarModalConfigurarHorarios();
+                }
+                carregarHorariosAtuais();
+                
+                // Remover classes que escondem o modal
+                const modalElement = document.getElementById('modal-configurar-horarios');
+                modalElement.classList.remove('hidden');
+                modalElement.classList.add('flex');
+                modalElement.classList.add('items-center');
+                modalElement.classList.add('justify-center');
+                
+                console.log('Modal aberto com sucesso');
+                console.log('Classes do modal:', modalElement.className);
+            } catch (error) {
+                console.error('Erro ao abrir modal de horários:', error);
+                showMessage('Erro ao abrir configuração de horários', 'error');
+            }
+        }
+        
+        function criarModalConfigurarHorarios() {
+            const modalHtml = `
+                <div id="modal-configurar-horarios" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <div class="p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Configurar Horários dos Turnos</h3>
+                            
+                            <div class="space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Turno A</label>
+                                        <input type="text" id="horario-turno-a" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="07:00/15:20">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Turno B</label>
+                                        <input type="text" id="horario-turno-b" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="15:00/23:20">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Turno C</label>
+                                        <input type="text" id="horario-turno-c" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="23:00/07:00">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Turno ADM 1</label>
+                                        <input type="text" id="horario-turno-adm1" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="08:00/17:00">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Turno ADM 2</label>
+                                        <input type="text" id="horario-turno-adm2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="08:00/17:00">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Folguista</label>
+                                        <input type="text" id="horario-folguista" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Folguista">
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md">
+                                    <p class="text-sm text-blue-800 dark:text-blue-200">
+                                        <strong>Formato:</strong> HH:MM/HH:MM (ex: 07:00/15:20)<br>
+                                        <strong>Dica:</strong> Use "Folguista" para o turno Folguista
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-end space-x-3 mt-6">
+                                <button onclick="fecharModalConfigurarHorarios()" class="px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 transition-colors">
+                                    Cancelar
+                                </button>
+                                <button onclick="salvarConfiguracaoHorarios()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors">
+                                    Salvar Horários
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+        
+        function carregarHorariosAtuais() {
+            const horariosPersonalizados = localStorage.getItem('horariosTurnos');
+            const horarios = horariosPersonalizados ? JSON.parse(horariosPersonalizados) : {
+                'Turno A': '07:00/15:20',
+                'Turno B': '15:00/23:20',
+                'Turno C': '23:00/07:00',
+                'Turno ADM 1': '08:00/17:00',
+                'Turno ADM 2': '08:00/17:00',
+                'Folguista': 'Folguista'
+            };
+            
+            document.getElementById('horario-turno-a').value = horarios['Turno A'] || '';
+            document.getElementById('horario-turno-b').value = horarios['Turno B'] || '';
+            document.getElementById('horario-turno-c').value = horarios['Turno C'] || '';
+            document.getElementById('horario-turno-adm1').value = horarios['Turno ADM 1'] || '';
+            document.getElementById('horario-turno-adm2').value = horarios['Turno ADM 2'] || '';
+            document.getElementById('horario-folguista').value = horarios['Folguista'] || '';
+        }
+        
+        function salvarConfiguracaoHorarios() {
+            const horarios = {
+                'Turno A': document.getElementById('horario-turno-a').value || '07:00/15:20',
+                'Turno B': document.getElementById('horario-turno-b').value || '15:00/23:20',
+                'Turno C': document.getElementById('horario-turno-c').value || '23:00/07:00',
+                'Turno ADM 1': document.getElementById('horario-turno-adm1').value || '08:00/17:00',
+                'Turno ADM 2': document.getElementById('horario-turno-adm2').value || '08:00/17:00',
+                'Folguista': document.getElementById('horario-folguista').value || 'Folguista'
+            };
+            
+            console.log('Salvando horários:', horarios);
+            salvarHorariosTurnos(horarios);
+            fecharModalConfigurarHorarios();
+            
+            // Forçar recarregamento da escala atual
+            setTimeout(() => {
+                const select = document.getElementById('select-escala');
+                if (select && select.value) {
+                    const escalaId = select.value;
+                    console.log('Recarregando escala ID:', escalaId);
+                    
+                    // Recarregar escalas do cache/localStorage
+                    if (typeof carregarEscalas === 'function') {
+                        carregarEscalas().then(() => {
+                            const escala = escalasCache.find(e => e.id === escalaId);
+                            if (escala) {
+                                console.log('Renderizando escala com novos horários:', escala);
+                                renderGridEscala(escala);
+                                showMessage('Horários atualizados e escala recarregada!', 'success');
+                            } else {
+                                console.error('Escala não encontrada após recarregar');
+                            }
+                        }).catch(error => {
+                            console.error('Erro ao recarregar escalas:', error);
+                        });
+                    } else {
+                        // Fallback: renderizar diretamente
+                        const escalas = typeof carregarEscalasLocal === 'function' ? carregarEscalasLocal() : [];
+                        const escala = escalas.find(e => e.id === escalaId);
+                        if (escala) {
+                            console.log('Renderizando escala (fallback):', escala);
+                            renderGridEscala(escala);
+                            showMessage('Horários atualizados!', 'success');
+                        }
+                    }
+                } else {
+                    console.log('Nenhuma escala selecionada para recarregar');
+                    showMessage('Horários salvos! Abra uma escala para ver as alterações.', 'info');
+                }
+            }, 100);
+        }
+        
+        function fecharModalConfigurarHorarios() {
+            const modal = document.getElementById('modal-configurar-horarios');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex', 'items-center', 'justify-center');
+                console.log('Modal fechado');
+            }
+        }
+        
+        function getPeriodoEscala() {
+            const headers = document.querySelectorAll('#escala-tabela thead th');
+            if (headers.length <= 7) return 'N/A';
+            
+            const firstDate = headers[7].textContent.trim();
+            const lastDate = headers[headers.length - 2].textContent.trim();
+            return `${firstDate} a ${lastDate}`;
+        }
+        
+        function contarFuncionariosPorTurno(turno) {
+            const rows = document.querySelectorAll('#escala-tabela tbody tr');
+            let count = 0;
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 4) {
+                    const turnoCell = cells[3].textContent.trim();
+                    if (turnoCell === turno) {
+                        count++;
+                    }
+                }
+            });
+            
+            return count;
+        }
+
+        function exportarEscalaExcel() {
+            const select = document.getElementById('select-escala');
+            if (!select || !select.value) {
+                showMessage('Selecione uma escala para exportar.', 'warning');
+                return;
+            }
+
+            const table = document.getElementById('escala-tabela');
+            if (!table) return;
+
+            const escalaNome = (document.getElementById('escala-titulo') && document.getElementById('escala-titulo').textContent) || 'Escala';
+            const nomeArquivo = `Escala_${escalaNome.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}`;
+
+            // Exportar como .xlsx (Excel) quando SheetJS disponível
+            if (typeof XLSX !== 'undefined') {
+                try {
+                    const wb = XLSX.utils.book_new();
+                    
+                    // Criar estrutura limpa e elegante
+                    const dadosModelo = [];
+                    
+                    // Linha 1: vazia
+                    dadosModelo.push(['']);
+                    
+                    // Linha 2: USINA CAMBUÍ
+                    dadosModelo.push(['USINA CAMBUÍ']);
+                    
+                    // Linha 3: vazia
+                    dadosModelo.push(['']);
+                    
+                    // Linha 4: ESCALA MENSAL DE TRABALHO
+                    dadosModelo.push(['ESCALA MENSAL DE TRABALHO']);
+                    
+                    // Linha 5: vazia
+                    dadosModelo.push(['']);
+                    
+                    // Linha 6: PERÍODO
+                    const periodo = getPeriodoEscala();
+                    dadosModelo.push([`PERÍODO: ${periodo}`]);
+                    
+                    // Linha 7: vazia
+                    dadosModelo.push(['']);
+                    
+                    // Linha 8: Data de geração
+                    dadosModelo.push([`DATA: ${new Date().toLocaleDateString('pt-BR')}`]);
+                    
+                    // Linha 9: vazia
+                    dadosModelo.push(['']);
+                    
+                    // Linha 10: cabeçalho da tabela
+                    const headers = ['MAT', 'NOME', 'TURNO', 'ESCALA'];
+                    
+                    // Adicionar dias do mês
+                    const tableHeaders = table.querySelectorAll('thead th');
+                    for (let i = 7; i < tableHeaders.length - 1; i++) {
+                        const headerText = tableHeaders[i].textContent.trim();
+                        if (headerText) {
+                            const diaMatch = headerText.match(/\d+/);
+                            if (diaMatch) {
+                                headers.push(diaMatch[0]);
+                            }
+                        }
+                    }
+                    
+                    dadosModelo.push(headers);
+                    
+                    // Dados dos funcionários
+                    const rows = table.querySelectorAll('tbody tr');
+                    rows.forEach(row => {
+                        const cells = row.querySelectorAll('td');
+                        if (cells.length >= 7) {
+                            const rowData = [];
+                            
+                            // MAT
+                            const matricula = cells[1].textContent.trim();
+                            rowData.push(matricula);
+                            
+                            // NOME em maiúsculas
+                            const nome = cells[2].textContent.trim().toUpperCase();
+                            rowData.push(nome);
+                            
+                            // TURNO abreviado
+                            let turno = cells[3].textContent.trim();
+                            if (turno.includes('ADM')) {
+                                turno = 'ADM';
+                            } else if (turno.includes('Folguista')) {
+                                turno = 'FOLG';
+                            } else if (turno.includes('Turno')) {
+                                turno = turno.replace('Turno ', '');
+                            }
+                            rowData.push(turno);
+                            
+                            // ESCALA
+                            rowData.push(cells[5].textContent.trim());
+                            
+                            // Dias do mês
+                            for (let i = 7; i < cells.length - 1; i++) {
+                                const cellText = cells[i].textContent.trim();
+                                rowData.push(cellText === 'F' ? 'F' : '');
+                            }
+                            
+                            dadosModelo.push(rowData);
+                        }
+                    });
+                    
+                    // Criar worksheet
+                    const ws = XLSX.utils.aoa_to_sheet(dadosModelo);
+                    
+                    // Configurar largura das colunas
+                    const colWidths = [
+                        { wch: 10 }, // MAT
+                        { wch: 40 }, // NOME
+                        { wch: 12 }, // TURNO
+                        { wch: 10 }  // ESCALA
+                    ];
+                    
+                    // Adicionar largura para colunas dos dias
+                    const numDias = headers.length - 4;
+                    for (let i = 0; i < numDias; i++) {
+                        colWidths.push({ wch: 7 });
+                    }
+                    
+                    ws['!cols'] = colWidths;
+                    
+                    // Mesclar células para o cabeçalho
+                    const totalCols = headers.length;
+                    const lastColLetter = XLSX.utils.encode_col(totalCols - 1);
+                    
+                    const mergeRanges = [
+                        `A2:${lastColLetter}2`, // USINA CAMBUÍ
+                        `A4:${lastColLetter}4`, // ESCALA MENSAL DE TRABALHO
+                        `A6:${lastColLetter}6`, // PERÍODO
+                        `A8:${lastColLetter}8`  // DATA
+                    ];
+                    
+                    mergeRanges.forEach(range => {
+                        if (!ws['!merges']) ws['!merges'] = [];
+                        ws['!merges'].push(XLSX.utils.decode_range(range));
+                    });
+                    
+                    // Cores profissionais
+                    const azulEscuro = { rgb: "1F4E79" };
+                    const azulMedio = { rgb: "2E75B6" };
+                    const azulClaro = { rgb: "BDD7EE" };
+                    const verde = { rgb: "70AD47" };
+                    const laranja = { rgb: "ED7D31" };
+                    const cinzaEscuro = { rgb: "404040" };
+                    const cinzaMedio = { rgb: "D9D9D9" };
+                    const branco = { rgb: "FFFFFF" };
+                    
+                    // Estilizar cabeçalho principal
+                    ws['A2'].s = {
+                        font: { bold: true, sz: 16, color: branco },
+                        fill: { patternType: "solid", fgColor: azulEscuro },
+                        alignment: { horizontal: "center", vertical: "center" }
+                    };
+                    
+                    ws['A4'].s = {
+                        font: { bold: true, sz: 14, color: branco },
+                        fill: { patternType: "solid", fgColor: azulMedio },
+                        alignment: { horizontal: "center", vertical: "center" }
+                    };
+                    
+                    ws['A6'].s = {
+                        font: { bold: true, sz: 12, color: branco },
+                        fill: { patternType: "solid", fgColor: verde },
+                        alignment: { horizontal: "center", vertical: "center" }
+                    };
+                    
+                    ws['A8'].s = {
+                        font: { bold: true, sz: 11, color: branco },
+                        fill: { patternType: "solid", fgColor: laranja },
+                        alignment: { horizontal: "center", vertical: "center" }
+                    };
+                    
+                    // Estilizar cabeçalho da tabela (linha 10)
+                    const headerRow = 10;
+                    for (let c = 0; c < headers.length; c++) {
+                        const cellAddress = XLSX.utils.encode_cell({ r: headerRow, c });
+                        if (ws[cellAddress]) {
+                            ws[cellAddress].s = {
+                                font: { bold: true, sz: 11, color: branco },
+                                fill: { patternType: "solid", fgColor: azulEscuro },
+                                alignment: { horizontal: "center", vertical: "center" },
+                                border: {
+                                    top: { style: "thin", color: cinzaEscuro },
+                                    bottom: { style: "thin", color: cinzaEscuro },
+                                    left: { style: "thin", color: cinzaEscuro },
+                                    right: { style: "thin", color: cinzaEscuro }
+                                }
+                            };
+                        }
+                    }
+                    
+                    // Estilizar dados dos funcionários
+                    for (let r = headerRow + 1; r < dadosModelo.length; r++) {
+                        // Alternar cores das linhas
+                        const isPar = (r - headerRow) % 2 === 0;
+                        const corFundo = isPar ? branco : azulClaro;
+                        
+                        for (let c = 0; c < headers.length; c++) {
+                            const cellAddress = XLSX.utils.encode_cell({ r, c });
+                            if (ws[cellAddress]) {
+                                const isFolga = ws[cellAddress].v === 'F';
+                                
+                                let corFonte = cinzaEscuro;
+                                let corFundoCelula = corFundo;
+                                let negrito = false;
+                                
+                                // Coluna MAT
+                                if (c === 0) {
+                                    negrito = true;
+                                    corFundoCelula = "#F2F2F2";
+                                }
+                                // Coluna NOME
+                                else if (c === 1) {
+                                    negrito = true;
+                                    corFundoCelula = isPar ? "#F8F8F8" : "#E8E8E8";
+                                }
+                                // Coluna TURNO
+                                else if (c === 2) {
+                                    const turno = ws[cellAddress].v;
+                                    if (turno === 'A') corFundoCelula = "#E6F3FF";
+                                    else if (turno === 'B') corFundoCelula = "#FFF2E6";
+                                    else if (turno === 'C') corFundoCelula = "#F0F0F0";
+                                    else if (turno === 'ADM') corFundoCelula = "#E6FFE6";
+                                    else if (turno === 'FOLG') corFundoCelula = "#FFE6E6";
+                                }
+                                // Dias do mês
+                                else if (c >= 4) {
+                                    if (isFolga) {
+                                        corFundoCelula = "#70AD47";
+                                        corFonte = branco;
+                                        negrito = true;
+                                    }
+                                }
+                                
+                                ws[cellAddress].s = {
+                                    font: { sz: 10, color: corFonte, bold: negrito },
+                                    fill: { patternType: "solid", fgColor: corFundoCelula },
+                                    alignment: { 
+                                        horizontal: c === 1 ? "left" : "center", 
+                                        vertical: "center" 
+                                    },
+                                    border: {
+                                        top: { style: "thin", color: cinzaMedio },
+                                        bottom: { style: "thin", color: cinhaMedio },
+                                        left: { style: "thin", color: cinhaMedio },
+                                        right: { style: "thin", color: cinhaMedio }
+                                    }
+                                };
+                            }
+                        }
+                    }
+                    
+                    // Adicionar worksheet ao workbook
+                    XLSX.utils.book_append_sheet(wb, ws, 'Escala');
+                    
+                    // Salvar o arquivo
+                    XLSX.writeFile(wb, `${nomeArquivo}.xlsx`);
+                    showMessage('Escala exportada com sucesso!', 'success');
+                    
+                } catch (error) {
+                    console.error('Erro ao exportar Excel:', error);
+                    showMessage('Erro ao exportar escala. Tente novamente.', 'error');
+                }
+            } else {
+                // Fallback: CSV
+                showMessage('Biblioteca Excel não disponível. Exportando como CSV...', 'warning');
+            }
+        }
+
+        function abrirModalAdicionarFuncionarioEscala() {
+            const select = document.getElementById('select-escala');
+            if (!select || !select.value) {
+                showMessage('Selecione uma escala primeiro.', 'warning');
+                return;
+            }
+            document.getElementById('modal-add-func-escala').classList.add('active');
+            
+            // Popula o select excluindo quem já está na escala (usa cache quando Supabase para evitar Promise)
+            const escalaId = select.value;
+            const escalas = sb ? escalasCache : carregarEscalas();
+            const escala = Array.isArray(escalas) ? escalas.find(e => e.id === escalaId) : null;
+            if (!escala) { showMessage('Escala não encontrada.', 'warning'); return; }
+            const jaNaEscala = new Set((escala.funcionarios || []).map(f => typeof f === 'object' ? String(f.matricula) : String(f)));
+            
+            const sel = document.getElementById('add-func-escala-select');
+            sel.innerHTML = '';
+            
+            const funcsDisponiveis = funcionarios.filter(f => !jaNaEscala.has(String(f.cadastro)))
+                                                 .sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
+            
+            // Função para filtrar e renderizar a lista
+            const renderOpcoes = (termo = '') => {
+                sel.innerHTML = '';
+                const termoLower = termo.toLowerCase();
+                const filtrados = funcsDisponiveis.filter(f => 
+                    String(f.cadastro).includes(termoLower) || 
+                    (f.nome || '').toLowerCase().includes(termoLower)
+                );
+                
+                filtrados.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f.cadastro;
+                    opt.textContent = `${f.cadastro} - ${f.nome}`;
+                    sel.appendChild(opt);
+                });
+            };
+
+            // Renderiza inicial
+            renderOpcoes();
+
+            // Configura a busca
+            const inputBusca = document.getElementById('add-func-escala-busca');
+            if (inputBusca) {
+                inputBusca.value = '';
+                // Remove listeners antigos para evitar duplicação (clonando o nó)
+                const novoInput = inputBusca.cloneNode(true);
+                inputBusca.parentNode.replaceChild(novoInput, inputBusca);
+                
+                novoInput.addEventListener('input', (e) => renderOpcoes(e.target.value));
+                novoInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        // Se houver apenas um resultado ou uma correspondência exata de matrícula, seleciona e foca no próximo campo
+                        if (sel.options.length > 0) {
+                            sel.options[0].selected = true;
+                            // Se tiver correspondência exata, seleciona ela
+                            for(let i=0; i<sel.options.length; i++) {
+                                if (sel.options[i].value === e.target.value) {
+                                    sel.selectedIndex = i;
+                                    break;
+                                }
+                            }
+                            document.getElementById('add-func-escala-ultima-folga').focus();
+                        }
+                    }
+                });
+                setTimeout(() => novoInput.focus(), 100);
+            }
+        }
+
+        function fecharModalAddFuncEscala() {
+            document.getElementById('modal-add-func-escala').classList.remove('active');
+        }
+
+        async function salvarAddFuncEscala(e) {
+            e.preventDefault();
+            const sel = document.getElementById('add-func-escala-select');
+            const selecionados = Array.from(sel.selectedOptions).map(o => o.value);
+            const ultimaFolga = document.getElementById('add-func-escala-ultima-folga').value;
+            
+            if (selecionados.length === 0) {
+                showMessage('Selecione pelo menos um funcionário.', 'warning');
+                return;
+            }
+            if (!ultimaFolga) {
+                showMessage('Informe a data da última folga.', 'warning');
+                return;
+            }
+
+            const selectEscala = document.getElementById('select-escala');
+            const escalaId = selectEscala.value;
+            
+            if (sb) {
+                // Modo Banco de Dados
+                let sucesso = true;
+                for (const matricula of selecionados) {
+                    const ok = await adicionarFuncionarioEscalaDB(escalaId, {
+                        matricula: matricula,
+                        ultimaFolga: ultimaFolga,
+                        padrao: null,
+                        folgasExtras: []
+                    });
+                    if (!ok) sucesso = false;
+                }
+                
+                if (sucesso) {
+                    await carregarEscalas(); // Recarrega
+                    const escala = escalasCache.find(e => e.id === escalaId);
+                    renderGridEscala(escala);
+                    fecharModalAddFuncEscala();
+                    showMessage('Funcionários adicionados com sucesso!', 'success');
+                } else {
+                    showMessage('Erro ao adicionar alguns funcionários. Verifique o console.', 'error');
+                }
+            } else {
+                // Modo Local
+                const escalas = carregarEscalasLocal();
+                const escala = escalas.find(e => e.id === escalaId);
+                
+                if (escala) {
+                    if (escala.funcionarios.length > 0 && typeof escala.funcionarios[0] !== 'object') {
+                        escala.funcionarios = escala.funcionarios.map(m => ({ matricula: m, ultimaFolga: null, folgasExtras: [] }));
+                    }
+
+                    const novos = selecionados.map(m => ({ matricula: m, ultimaFolga: ultimaFolga, folgasExtras: [] }));
+                    escala.funcionarios = [...(escala.funcionarios || []), ...novos];
+                    
+                    salvarEscalasLocal(escalas);
+                    renderGridEscala(escala);
+                    fecharModalAddFuncEscala();
+                    showMessage('Funcionários adicionados com sucesso!', 'success');
+                }
+            }
+        }
+
+        async function removerFuncionarioEscala(escalaId, matricula) {
+            console.log('=== INÍCIO removerFuncionarioEscala ===');
+            console.log('Parâmetros:', { escalaId, matricula });
+            
+            if (!confirm('Remover funcionário desta escala?')) {
+                console.log('Usuário cancelou a remoção');
+                return;
+            }
+            
+            if (sb) {
+                console.log('Usando banco de dados (Supabase)');
+                const sucesso = await removerFuncionarioEscalaDB(escalaId, matricula);
+                console.log('Resultado da remoção no banco:', sucesso);
+                
+                if (sucesso) {
+                    console.log('Recarregando escalas...');
+                    await carregarEscalas();
+                    const escala = escalasCache.find(e => e.id === escalaId);
+                    console.log('Escala recarregada:', escala);
+                    renderGridEscala(escala);
+                    showMessage('Funcionário removido da escala.', 'success');
+                } else {
+                    showMessage('Erro ao remover funcionário do banco.', 'error');
+                }
+            } else {
+                console.log('Usando localStorage (modo offline)');
+                const escalas = carregarEscalasLocal();
+                console.log('Escalas do localStorage:', escalas);
+                
+                const escala = escalas.find(e => e.id === escalaId);
+                console.log('Escala encontrada:', escala);
+                
+                if (escala) {
+                    console.log('Funcionários antes da remoção:', escala.funcionarios);
+                    escala.funcionarios = escala.funcionarios.filter(f => {
+                        const m = typeof f === 'object' ? f.matricula : f;
+                        const resultado = String(m) !== String(matricula);
+                        console.log(`Verificando funcionário ${m} vs ${matricula}: ${resultado}`);
+                        return resultado;
+                    });
+                    console.log('Funcionários após a remoção:', escala.funcionarios);
+                    
+                    console.log('Salvando no localStorage...');
+                    salvarEscalasLocal(escalas);
+                    
+                    console.log('Renderizando escala...');
+                    renderGridEscala(escala);
+                    showMessage('Funcionário removido da escala.', 'success');
+                } else {
+                    console.error('Escala não encontrada!');
+                }
+            }
+            
+            console.log('=== FIM removerFuncionarioEscala ===');
+        }
+
+        async function definirUltimaFolga(escalaId, matricula, dataISO) {
+            console.log('=== INÍCIO definirUltimaFolga ===');
+            console.log('Parâmetros:', { escalaId, matricula, dataISO });
+            
+            const dataExibicao = dataISO.split('-').reverse().join('/');
+            console.log('Data de exibição:', dataExibicao);
+            
+            // Temporariamente remover o confirm para testar
+            console.log('TESTE: Pulando confirmação para debug');
+            
+            // if (!confirm(`DEFINIR ÚLTIMA FOLGA?\n\nVocê está definindo o dia ${dataExibicao} como a ÚLTIMA FOLGA deste funcionário.\n\nO sistema irá calcular automaticamente TODAS as folgas do mês alinhando a escala a partir desta data.\n\nDeseja continuar?`)) {
+            //     console.log('Usuário cancelou a definição de última folga');
+            //     return;
+            // }
+            
+            console.log('Prosseguindo com a atualização...');
+
+            if (sb) {
+                console.log('Usando banco de dados (Supabase)');
+                const sucesso = await atualizarFuncionarioEscalaDB(escalaId, matricula, { ultimaFolga: dataISO });
+                console.log('Resultado da atualização:', sucesso);
+                
+                if (sucesso) {
+                    // Clear cache and reload to ensure fresh data
+                    console.log('Limpando cache e recarregando...');
+                    escalasCache = [];
+                    await carregarEscalas();
+                    const escala = escalasCache.find(e => e.id === escalaId);
+                    console.log('Escala recarregada:', escala);
+                    
+                    if (escala) {
+                        console.log('Renderizando escala atualizada...');
+                        renderGridEscala(escala);
+                        showMessage(`Folga base definida em ${dataExibicao}. Escala recalculada para TODO o mês!`, 'success');
+                    }
+                } else {
+                    showMessage('Erro ao atualizar folga no banco.', 'error');
+                }
+            } else {
+                console.log('Usando localStorage (modo offline)');
+                // Get current scales from local storage
+                let escalas = carregarEscalasLocal();
+                console.log('Escalas do localStorage:', escalas);
+                
+                const escalaIndex = escalas.findIndex(e => e.id === escalaId);
+                if (escalaIndex === -1) {
+                    console.error('Escala não encontrada no localStorage!');
+                    return;
+                }
+                
+                let escala = escalas[escalaIndex];
+                console.log('Escala encontrada:', escala);
+                
+                const funcIndex = escala.funcionarios.findIndex(f => {
+                    const mat = typeof f === 'object' ? f.matricula : f;
+                    return String(mat) === String(matricula);
+                });
+                console.log('Índice do funcionário:', funcIndex);
+
+                if (funcIndex !== -1) {
+                    // Normalize employee object
+                    if (typeof escala.funcionarios[funcIndex] !== 'object') {
+                        escala.funcionarios[funcIndex] = { 
+                            matricula: escala.funcionarios[funcIndex], 
+                            ultimaFolga: null, 
+                            folgasExtras: [] 
+                        };
+                    }
+                    
+                    // Update the ultimaFolga
+                    console.log('Atualizando ultimaFolga para:', dataISO);
+                    escala.funcionarios[funcIndex].ultimaFolga = dataISO;
+                    console.log('Funcionário atualizado:', escala.funcionarios[funcIndex]);
+                    
+                    // Update the scales array
+                    escalas[escalaIndex] = escala;
+                    
+                    // Save to local storage and update cache
+                    console.log('Salvando no localStorage...');
+                    salvarEscalasLocal(escalas);
+                    
+                    // Re-render the scale
+                    console.log('Renderizando escala...');
+                    renderGridEscala(escala);
+                    showMessage(`Folga base definida em ${dataExibicao}. Escala recalculada para TODO o mês!`, 'success');
+                } else {
+                    console.error('Funcionário não encontrado na escala!');
+                }
+            }
+            
+            console.log('=== FIM definirUltimaFolga ===');
+        }
+
+        let _escolhaFolgaParams = null;
+        function abrirModalEscolhaFolga(escalaId, matricula, dataISO) {
+            console.log('Abrindo modal de escolha:', { escalaId, matricula, dataISO });
+            _escolhaFolgaParams = { escalaId, matricula, dataISO };
+            const dataExib = dataISO.split('-').reverse().join('/');
+            const el = document.getElementById('modal-escolha-folga-data');
+            if (el) el.textContent = `Dia ${dataExib} — escolha a ação:`;
+            
+            const modal = document.getElementById('modal-escolha-folga');
+            if (modal) {
+                modal.classList.add('active');
+                console.log('Modal aberto com sucesso');
+            } else {
+                console.error('Modal não encontrado');
+            }
+            
+            // Guardar os parâmetros em variáveis locais para usar nos botões
+            const params = { escalaId, matricula, dataISO };
+            
+            document.getElementById('btn-folga-extra').onclick = () => {
+                console.log('Botão folga extra clicado');
+                fecharModalEscolhaFolga();
+                console.log('Chamando adicionarFolgaExtra com:', params);
+                adicionarFolgaExtra(params.escalaId, params.matricula, params.dataISO);
+            };
+            document.getElementById('btn-reajustar-escala').onclick = () => {
+                console.log('Botão reajustar escala clicado');
+                fecharModalEscolhaFolga();
+                console.log('Chamando reajustarEscalaComFolgaExtra com:', params);
+                reajustarEscalaComFolgaExtra(params.escalaId, params.matricula, params.dataISO);
+            };
+            document.getElementById('btn-ultima-folga').onclick = () => {
+                console.log('Botão última folga clicado');
+                fecharModalEscolhaFolga();
+                console.log('Chamando definirUltimaFolga com:', params);
+                console.log('Função definirUltimaFolga existe?', typeof definirUltimaFolga);
+                try {
+                    console.log('Tentando executar definirUltimaFolga...');
+                    definirUltimaFolga(params.escalaId, params.matricula, params.dataISO);
+                    console.log('definirUltimaFolga executada com sucesso!');
+                } catch (error) {
+                    console.error('Erro ao chamar definirUltimaFolga:', error);
+                    console.error('Stack trace:', error.stack);
+                }
+            };
+        }
+        function fecharModalEscolhaFolga() {
+            document.getElementById('modal-escolha-folga').classList.remove('active');
+            _escolhaFolgaParams = null;
+        }
+
+        async function adicionarFolgaExtra(escalaId, matricula, dataISO) {
+            console.log('=== INÍCIO adicionarFolgaExtra ===');
+            console.log('Parâmetros:', { escalaId, matricula, dataISO });
+            
+            const dataExibicao = dataISO.split('-').reverse().join('/');
+            
+            // Get current scale data
+            let escalas = sb ? escalasCache : carregarEscalasLocal();
+            console.log('Escalas carregadas:', escalas);
+            
+            let escala = escalas.find(e => e.id === escalaId);
+            console.log('Escala encontrada:', escala);
+            
+            if (!escala) {
+                // If not found in cache, try to reload
+                if (sb) {
+                    console.log('Tentando recarregar escalas do banco...');
+                    await carregarEscalas();
+                    escalas = escalasCache;
+                    escala = escalas.find(e => e.id === escalaId);
+                    console.log('Escala após recarregar:', escala);
+                }
+                if (!escala) {
+                    console.error('Escala não encontrada!');
+                    return;
+                }
+            }
+            
+            const funcIndex = escala.funcionarios.findIndex(f => (typeof f === 'object' ? f.matricula : f) == matricula);
+            console.log('Índice do funcionário:', funcIndex);
+            
+            if (funcIndex === -1) {
+                console.error('Funcionário não encontrado na escala!');
+                return;
+            }
+            
+            // Normalize the employee object
+            let item = escala.funcionarios[funcIndex];
+            const obj = typeof item === 'object' ? {...item} : { matricula: item, ultimaFolga: null, padrao: null, folgasExtras: [] };
+            if (!Array.isArray(obj.folgasExtras)) obj.folgasExtras = [];
+            
+            console.log('Objeto do funcionário:', obj);
+            
+            // Check if folga extra already exists
+            if (obj.folgasExtras.includes(dataISO)) {
+                console.log('Folga extra já existe, perguntando se deseja remover...');
+                if (confirm(`FOLGA EXTRA JÁ EXISTE\n\nA folga extra para o dia ${dataExibicao} já está marcada.\n\nDeseja REMOVER esta folga extra?`)) {
+                    console.log('Removendo folga extra...');
+                    obj.folgasExtras = obj.folgasExtras.filter(d => d !== dataISO);
+                    escala.funcionarios[funcIndex] = obj;
+                    
+                    if (sb) {
+                        const ok = await atualizarFuncionarioEscalaDB(escalaId, matricula, { folgasExtras: obj.folgasExtras });
+                        if (ok) { 
+                            await carregarEscalas(); // Reload from database
+                            const esc = escalasCache.find(e => e.id === escalaId); 
+                            if (esc) renderGridEscala(esc); 
+                            showMessage(`Folga extra de ${dataExibicao} REMOVIDA com sucesso!`, 'success'); 
+                        } else {
+                            showMessage('Erro ao remover folga extra no banco.', 'error');
+                        }
+                    } else {
+                        // Update local storage and cache
+                        const escalaIndex = escalas.findIndex(e => e.id === escalaId);
+                        escalas[escalaIndex] = escala;
+                        salvarEscalasLocal(escalas);
+                        renderGridEscala(escala);
+                        showMessage(`Folga extra de ${dataExibicao} REMOVIDA.`, 'success');
+                    }
+                }
+                return;
+            }
+            
+            // Add new folga extra with confirmation
+            if (!confirm(`ADICIONAR FOLGA EXTRA?\n\nVocê está adicionando uma folga extra para o dia ${dataExibicao}.\n\nEsta ação NÃO altera o padrão da escala, apenas marca este dia como folga.\n\nDeseja continuar?`)) {
+                console.log('Usuário cancelou a adição de folga extra');
+                return;
+            }
+            
+            console.log('Adicionando folga extra...');
+            obj.folgasExtras = [...obj.folgasExtras, dataISO].sort();
+            escala.funcionarios[funcIndex] = obj;
+            
+            console.log('Objeto atualizado:', obj);
+            
+            if (sb) {
+                console.log('Salvando no banco de dados...');
+                const ok = await atualizarFuncionarioEscalaDB(escalaId, matricula, { folgasExtras: obj.folgasExtras });
+                if (ok) { 
+                    await carregarEscalas(); // Reload from database
+                    const esc = escalasCache.find(e => e.id === escalaId); 
+                    if (esc) renderGridEscala(esc); 
+                    showMessage(`Folga extra de ${dataExibicao} ADICIONADA com sucesso!`, 'success'); 
+                } else {
+                    showMessage('Erro ao salvar folga extra no banco.', 'error');
+                }
+            } else {
+                console.log('Salvando no localStorage...');
+                // Update local storage and cache
+                const escalaIndex = escalas.findIndex(e => e.id === escalaId);
+                escalas[escalaIndex] = escala;
+                salvarEscalasLocal(escalas);
+                renderGridEscala(escala);
+                showMessage(`Folga extra de ${dataExibicao} ADICIONADA.`, 'success');
+            }
+            
+            console.log('=== FIM adicionarFolgaExtra ===');
+        }
+
+        async function reajustarEscalaComFolgaExtra(escalaId, matricula, dataISO) {
+            console.log('=== INÍCIO reajustarEscalaComFolgaExtra ===');
+            console.log('Reajustando escala a partir de:', dataISO);
+            
+            const dataExibicao = dataISO.split('-').reverse().join('/');
+            
+            if (!confirm(`REAJUSTAR ESCALA?\n\nVocê está reajustando a escala a partir do dia ${dataExibicao}.\n\nO sistema irá marcar este dia como folga e recalcular as próximas folgas.\n\nAs folgas anteriores serão mantidas.\n\nDeseja continuar?`)) {
+                console.log('Usuário cancelou o reajuste');
+                return;
+            }
+            
+            console.log('Usuário confirmou o reajuste!');
+            
+            // Get current scale data
+            let escalas = sb ? escalasCache : carregarEscalasLocal();
+            console.log('Escalas disponíveis:', escalas);
+            
+            let escala = escalas.find(e => e.id === escalaId);
+            console.log('Escala encontrada:', escala);
+            
+            if (!escala) {
+                if (sb) {
+                    console.log('Tentando recarregar escalas do banco...');
+                    await carregarEscalas();
+                    escalas = escalasCache;
+                    escala = escalas.find(e => e.id === escalaId);
+                    console.log('Escala após recarregar:', escala);
+                }
+                if (!escala) {
+                    console.error('Escala não encontrada!');
+                    return;
+                }
+            }
+            
+            const funcIndex = escala.funcionarios.findIndex(f => (typeof f === 'object' ? f.matricula : f) == matricula);
+            console.log('Índice do funcionário:', funcIndex);
+            
+            if (funcIndex === -1) {
+                console.error('Funcionário não encontrado na escala!');
+                return;
+            }
+            
+            // Normalize employee object
+            let item = escala.funcionarios[funcIndex];
+            const obj = typeof item === 'object' ? {...item} : { matricula: item, ultimaFolga: null, padrao: null, folgasExtras: [] };
+            if (!Array.isArray(obj.folgasExtras)) obj.folgasExtras = [];
+            
+            console.log('Objeto original do funcionário:', item);
+            console.log('Objeto normalizado:', obj);
+            
+            // Mantém todas as folgas extras anteriores e adiciona a nova
+            console.log('FolgasExtras ANTES:', obj.folgasExtras);
+            console.log('Adicionando folga extra em:', dataISO);
+            
+            // Garante que a data escolhida esteja em folgasExtras
+            if (!obj.folgasExtras.includes(dataISO)) {
+                obj.folgasExtras = [...obj.folgasExtras, dataISO].sort();
+                console.log('FolgasExtras APÓS adicionar (mantendo anteriores):', obj.folgasExtras);
+            } else {
+                console.log('Folga extra já existia, mantendo como está');
+            }
+            
+            // Update this date as new "ultimaFolga" for recalculation
+            console.log('Atualizando ultimaFolga para:', dataISO);
+            obj.ultimaFolga = dataISO;
+            console.log('Objeto final antes de salvar:', obj);
+            
+            escala.funcionarios[funcIndex] = obj;
+            
+            if (sb) {
+                console.log('Salvando no banco de dados...');
+                const ok = await atualizarFuncionarioEscalaDB(escalaId, matricula, { 
+                    ultimaFolga: dataISO,
+                    folgasExtras: obj.folgasExtras 
+                });
+                console.log('Resultado da atualização no banco:', ok);
+                
+                if (ok) { 
+                    console.log('Recarregando escalas do banco...');
+                    await carregarEscalas();
+                    const esc = escalasCache.find(e => e.id === escalaId); 
+                    console.log('Escala recarregada do banco:', esc);
+                    if (esc) {
+                        console.log('Renderizando escala...');
+                        renderGridEscala(esc); 
+                        showMessage(`Escala reajustada a partir de ${dataExibicao}!`, 'success'); 
+                    }
+                } else {
+                    showMessage('Erro ao reajustar escala no banco.', 'error');
+                }
+            } else {
+                console.log('Salvando no localStorage...');
+                // Update local storage and cache
+                const escalaIndex = escalas.findIndex(e => e.id === escalaId);
+                console.log('Índice da escala no array:', escalaIndex);
+                escalas[escalaIndex] = escala;
+                console.log('Array de escalas atualizado:', escalas);
+                
+                console.log('Salvando escalasLocal...');
+                salvarEscalasLocal(escalas);
+                
+                console.log('Renderizando escala...');
+                renderGridEscala(escala);
+                showMessage(`Escala reajustada a partir de ${dataExibicao}!`, 'success');
+            }
+            
+            console.log('=== FIM reajustarEscalaComFolgaExtra ===');
+        }
+
+        async function removerFolgaExtra(escalaId, matricula, dataISO) {
+            const escalas = sb ? escalasCache : carregarEscalasLocal();
+            const escala = escalas.find(e => e.id === escalaId);
+            if (!escala) return;
+            const funcIndex = escala.funcionarios.findIndex(f => (typeof f === 'object' ? f.matricula : f) == matricula);
+            if (funcIndex === -1) return;
+            const item = escala.funcionarios[funcIndex];
+            const obj = typeof item === 'object' ? item : { matricula: item, ultimaFolga: null, padrao: null, folgasExtras: [] };
+            if (!Array.isArray(obj.folgasExtras)) obj.folgasExtras = [];
+            obj.folgasExtras = obj.folgasExtras.filter(d => d !== dataISO);
+            escala.funcionarios[funcIndex] = obj;
+            if (sb) {
+                const ok = await atualizarFuncionarioEscalaDB(escalaId, matricula, { folgasExtras: obj.folgasExtras });
+                if (ok) { await carregarEscalas(); const esc = escalasCache.find(e => e.id === escalaId); if (esc) renderGridEscala(esc); showMessage('Folga extra removida.', 'success'); }
+                else { showMessage('Erro ao remover folga extra no banco.', 'error'); }
+            } else {
+                salvarEscalasLocal(escalas);
+                renderGridEscala(escala);
+                showMessage('Folga extra removida.', 'success');
+            }
+        }
+
+        async function alterarPadraoFuncionario(escalaId, matricula) {
+            // Busca a escala (seja do cache local ou DB carregado)
+            const escalas = sb ? escalasCache : carregarEscalasLocal();
+            const escalaIndex = escalas.findIndex(e => e.id === escalaId);
+            if (escalaIndex === -1) return;
+            const escala = escalas[escalaIndex];
+
+            const funcIndex = escala.funcionarios.findIndex(f => {
+                const mat = typeof f === 'object' ? f.matricula : f;
+                return String(mat) === String(matricula);
+            });
+            if (funcIndex === -1) return;
+
+            const currentPadrao = (typeof escala.funcionarios[funcIndex] === 'object' ? escala.funcionarios[funcIndex].padrao : null) || escala.padrao;
+            const novoPadrao = prompt(`Digite o novo padrão de escala para este funcionário (ex: 6x1, 5x1, 4x2, 12x36):\nAtual: ${currentPadrao}`, currentPadrao);
+
+            if (novoPadrao !== null) {
+                const padraoFinal = novoPadrao.trim() === '' ? null : novoPadrao.trim(); // null reseta para o da escala
+                
+                if (padraoFinal && !padraoFinal.includes('x')) {
+                    alert('Formato inválido! Use o formato NxN (ex: 6x1)');
+                    return;
+                }
+
+                if (sb) {
+                    const sucesso = await atualizarFuncionarioEscalaDB(escalaId, matricula, { padrao: padraoFinal });
+                    if (sucesso) {
+                        await carregarEscalas();
+                        const escalaAtualizada = escalasCache.find(e => e.id === escalaId);
+                        renderGridEscala(escalaAtualizada);
+                        showMessage(`Padrão alterado com sucesso!`, 'success');
+                    } else {
+                        showMessage('Erro ao atualizar padrão no banco.', 'error');
+                    }
+                } else {
+                    if (typeof escala.funcionarios[funcIndex] !== 'object') {
+                        escala.funcionarios[funcIndex] = { matricula: escala.funcionarios[funcIndex], ultimaFolga: null, folgasExtras: [] };
+                    }
+                    
+                    if (padraoFinal === null) {
+                        delete escala.funcionarios[funcIndex].padrao;
+                        showMessage(`Padrão resetado para o da escala (${escala.padrao})`, 'success');
+                    } else {
+                        escala.funcionarios[funcIndex].padrao = padraoFinal;
+                        showMessage(`Padrão alterado para ${padraoFinal} com sucesso!`, 'success');
+                    }
+                    salvarEscalasLocal(escalas);
+                    renderGridEscala(escala);
+                }
+            }
+        }
+
+        function excluirEscalaAtual() {
+            const select = document.getElementById('select-escala');
+            if (!select || !select.value) {
+                showMessage('Selecione uma escala para excluir.', 'warning');
+                return;
+            }
+            if (!confirm('Tem certeza que deseja excluir esta escala e todos os seus dados? Esta ação não pode ser desfeita.')) return;
+            
+            const escalaId = select.value;
+            if (sb) {
+                excluirEscalaDB(escalaId).then(async (ok) => {
+                    if (ok) {
+                        await carregarEscalas();
+                        renderSelectEscalas();
+                        document.getElementById('escala-thead').innerHTML = '';
+                        document.getElementById('escala-tbody').innerHTML = '';
+                        document.getElementById('escala-titulo').textContent = 'Nenhuma escala selecionada';
+                        document.getElementById('escala-subtitulo').textContent = '';
+                        showMessage('Escala excluída com sucesso.', 'success');
+                    } else showMessage('Erro ao excluir escala no banco.', 'error');
+                });
+                return;
+            }
+            let escalas = carregarEscalas();
+            escalas = escalas.filter(e => e.id !== escalaId);
+            salvarEscalasLocal(escalas);
+            
+            renderSelectEscalas();
+            document.getElementById('escala-thead').innerHTML = '';
+            document.getElementById('escala-tbody').innerHTML = '';
+            document.getElementById('escala-titulo').textContent = 'Nenhuma escala selecionada';
+            document.getElementById('escala-subtitulo').textContent = '';
+            
+            showMessage('Escala excluída com sucesso.', 'success');
+        }
+
+        function abrirModalEditarEscala() {
+            const select = document.getElementById('select-escala');
+            if (!select || !select.value) {
+                showMessage('Selecione uma escala para editar.', 'warning');
+                return;
+            }
+            const escalaId = select.value;
+            const escalas = sb ? escalasCache : carregarEscalas();
+            const escala = Array.isArray(escalas) ? escalas.find(e => e.id === escalaId) : null;
+            if (!escala) { showMessage('Escala não encontrada.', 'warning'); return; }
+
+            document.getElementById('edit-escala-id').value = escala.id;
+            document.getElementById('edit-escala-nome').value = escala.nome;
+            document.getElementById('edit-escala-data-inicio').value = escala.dataInicio;
+            document.getElementById('edit-escala-dias').value = escala.dias;
+            document.getElementById('edit-escala-padrao').value = escala.padrao;
+            document.getElementById('edit-escala-responsavel').value = escala.responsavel || '';
+            
+            document.getElementById('modal-editar-escala').classList.add('active');
+        }
+
+        function fecharModalEditarEscala() {
+            document.getElementById('modal-editar-escala').classList.remove('active');
+        }
+
+        function salvarEdicaoEscala(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-escala-id').value;
+            const nome = document.getElementById('edit-escala-nome').value.trim();
+            const dataInicio = document.getElementById('edit-escala-data-inicio').value;
+            const dias = parseInt(document.getElementById('edit-escala-dias').value, 10);
+            const padrao = document.getElementById('edit-escala-padrao').value;
+            const responsavel = document.getElementById('edit-escala-responsavel').value.trim();
+
+            if (!nome || !dataInicio || !dias) {
+                showMessage('Preencha os campos obrigatórios.', 'error');
+                return;
+            }
+
+            const escalas = sb ? escalasCache : carregarEscalas();
+            const index = Array.isArray(escalas) ? escalas.findIndex(e => e.id === id) : -1;
+            if (index !== -1) {
+                const escalaAtual = escalas[index];
+                const payload = { ...escalaAtual, id, nome, dataInicio, dias, padrao, responsavel };
+                if (sb) {
+                    atualizarEscalaDB(payload).then(async (ok) => {
+                        if (ok) {
+                            await carregarEscalas();
+                            const select = document.getElementById('select-escala');
+                            if (select) select.value = id;
+                            const esc = escalasCache.find(e => e.id === id);
+                            if (esc) renderGridEscala(esc);
+                            fecharModalEditarEscala();
+                            showMessage('Escala atualizada com sucesso!', 'success');
+                        } else showMessage('Erro ao atualizar escala no banco.', 'error');
+                    });
+                    return;
+                }
+                escalas[index] = { ...escalaAtual, nome, dataInicio, dias, padrao, responsavel };
+                salvarEscalasLocal(escalas);
+                renderSelectEscalas();
+                const select = document.getElementById('select-escala');
+                if (select) select.value = id;
+                renderGridEscala(escalas[index]);
+                fecharModalEditarEscala();
+                showMessage('Escala atualizada com sucesso!', 'success');
+            }
+        }
+
+        function abrirModalEscala() {
+            document.getElementById('modal-escala').classList.add('active');
+            popularFuncionariosSelectEscala();
+            if (!document.getElementById('escala-data-inicio').value) {
+                const hoje = new Date();
+                const y = hoje.getFullYear(), m = String(hoje.getMonth()+1).padStart(2,'0'), d = String(hoje.getDate()).padStart(2,'0');
+                document.getElementById('escala-data-inicio').value = `${y}-${m}-${d}`;
+            }
+            setTimeout(() => document.getElementById('escala-nome').focus(), 100);
+        }
+
+        function fecharModalEscala() {
+            document.getElementById('modal-escala').classList.remove('active');
+        }
+
+        async function processarImportacaoEscala(input) {
+            console.log('Iniciando processarImportacaoEscala');
+            try {
+                const file = input.files[0];
+                if (!file) {
+                    console.log('Nenhum arquivo selecionado');
+                    return;
+                }
+                console.log('Arquivo:', file.name, file.type);
+                
+                showMessage('Processando arquivo, aguarde...', 'info');
+
+                // Garante que funcionários estejam carregados para o Reverse Matching
+                if (!funcionarios || funcionarios.length === 0) {
+                    showMessage('Carregando lista de funcionários para reconhecimento...', 'info');
+                    try {
+                        if (typeof sb !== 'undefined' && sb) await carregarFuncionariosDB();
+                        else await carregarFuncionariosLocais();
+                    } catch(e) {
+                        console.error('Erro ao carregar funcionários:', e);
+                        showMessage('Erro ao carregar lista de funcionários. Tentando continuar...', 'warning');
+                    }
+                }
+
+                // Estrutura para guardar elementos com coordenadas
+                // rows[y] = [ { text, x, width } ]
+                let rows = [];
+
+                if (file.type === 'application/pdf') {
+                    if (typeof pdfjsLib === 'undefined') throw new Error('Biblioteca PDF.js não carregada');
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                    
+                    // Processa apenas a primeira página por enquanto (escalas geralmente cabem numa página ou tem cabeçalho repetido)
+                    for (let i = 1; i <= Math.min(pdf.numPages, 1); i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        
+                        // Agrupa por linha (Y) com tolerância
+                        const tempRows = {};
+                        content.items.forEach(item => {
+                            // PDF Y cresce de baixo pra cima, mas queremos de cima pra baixo visualmente.
+                            // Mas para agrupar, basta usar o Y original arredondado.
+                            const y = Math.round(item.transform[5]); 
+                            if (!tempRows[y]) tempRows[y] = [];
+                            tempRows[y].push({
+                                text: item.str,
+                                x: Math.round(item.transform[4]),
+                                width: Math.round(item.width)
+                            });
+                        });
+                        
+                        // Converte para array ordenado por Y (decrescente no PDF = cima para baixo)
+                        Object.keys(tempRows)
+                            .sort((a,b) => b-a)
+                            .forEach(y => {
+                                // Ordena itens dentro da linha por X
+                                tempRows[y].sort((a,b) => a.x - b.x);
+                                rows.push({ y: parseInt(y), items: tempRows[y] });
+                            });
+                    }
+                } else if (file.type.startsWith('image/')) {
+                    if (typeof Tesseract === 'undefined') throw new Error('Biblioteca Tesseract não carregada');
+                    const result = await Tesseract.recognize(file, 'por');
+                    result.data.lines.forEach(line => {
+                         const items = line.words.map(w => ({
+                             text: w.text,
+                             x: w.bbox.x0,
+                             width: w.bbox.x1 - w.bbox.x0
+                         }));
+                         rows.push({ y: line.bbox.y0, items: items });
+                    });
+                } else if (file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || file.name && /\.xlsx?$/i.test(file.name)) {
+                    // Excel .xlsx ou .xls (SheetJS)
+                    if (typeof XLSX === 'undefined') throw new Error('Biblioteca SheetJS não carregada. Use CSV ou recarregue a página.');
+                    const data = await file.arrayBuffer();
+                    const wb = XLSX.read(data, { type: 'array', cellDates: true });
+                    const firstSheet = wb.SheetNames[0];
+                    const ws = wb.Sheets[firstSheet];
+                    const rawRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+                    rawRows.forEach((row, y) => {
+                        const items = (Array.isArray(row) ? row : []).map((cell, x) => ({
+                            text: cell != null ? String(cell).trim() : '',
+                            x: x * 45,
+                            width: 40
+                        })).filter(it => it.text !== '');
+                        if (items.length > 0) rows.push({ y, items });
+                    });
+                } else {
+                     // CSV/Texto
+                     const text = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => resolve(e.target.result);
+                        reader.readAsText(file, 'UTF-8');
+                    });
+                    const sep = text.includes(';') ? ';' : (text.includes('\t') ? '\t' : ',');
+                    text.split(/\r\n|\n/).forEach((line, idx) => {
+                        if (line.trim()) {
+                            const cells = line.split(sep).map((c, i) => ({ text: c.replace(/^"|"$/g, '').trim(), x: i * 45, width: 40 }));
+                            rows.push({ y: idx, items: cells });
+                        }
+                    });
+                }
+
+                if (rows.length === 0) throw new Error('Nenhum conteúdo detectado.');
+
+                // 1. Detectar cabeçalho de datas
+                let dateColumns = []; // { date: Date, xStart, xEnd }
+                let headerRowIndex = -1;
+                
+                // Regex para datas: 09/fev, 09/02, 9-fev
+                const regexDate = /(\d{1,2})[-/]([a-z]{3}|\d{2})/i;
+                const meses = { 'jan':0, 'fev':1, 'mar':2, 'abr':3, 'mai':4, 'jun':5, 'jul':6, 'ago':7, 'set':8, 'out':9, 'nov':10, 'dez':11 };
+
+                for (let i = 0; i < Math.min(rows.length, 20); i++) {
+                    const row = rows[i];
+                    let foundDate = false;
+                    
+                    row.items.forEach(item => {
+                        const match = regexDate.exec(item.text);
+                        if (match) {
+                            foundDate = true;
+                            // Parse data
+                            try {
+                                const dia = parseInt(match[1]);
+                                const mesPart = match[2].toLowerCase();
+                                const mes = isNaN(mesPart) ? meses[mesPart] : parseInt(mesPart)-1;
+                                const ano = new Date().getFullYear(); // Assume ano atual
+                                const dateObj = new Date(ano, mes, dia);
+                                
+                                dateColumns.push({
+                                    date: dateObj,
+                                    xStart: item.x - 5, // Tolerância
+                                    xEnd: item.x + (item.width || 30) + 5
+                                });
+                            } catch(e){}
+                        }
+                    });
+
+                    if (foundDate && dateColumns.length > 3) { // Pelo menos 3 datas para confirmar que é cabeçalho
+                        headerRowIndex = i;
+                        break;
+                    }
+                }
+
+                // 2. Processar funcionários (Reverse Matching)
+                const funcionariosImportados = [];
+                // Ordena funcionários conhecidos por tamanho da matrícula (decrescente) para evitar matches parciais incorretos
+                // ex: matrícula "10" não dar match em "100" antes de "100" ser testado
+                // Mas a melhor forma é extrair números do texto e validar contra a lista.
+                
+                for (let i = (headerRowIndex === -1 ? 0 : headerRowIndex + 1); i < rows.length; i++) {
+                    const row = rows[i];
+                    // Junta texto da linha
+                    const fullText = row.items.map(it => it.text).join(' ');
+                    const fullTextNorm = fullText.replace(/\s+/g, ' ');
+
+                    // Estratégia: Extrair todos os números da linha e verificar se algum é uma matrícula válida
+                    const numbers = fullText.match(/\d+/g);
+                    let funcionarioEncontrado = null;
+
+                    if (numbers) {
+                        for (const numStr of numbers) {
+                            // Tenta encontrar funcionário com essa matrícula (ignorando zeros à esquerda na comparação)
+                            const numInt = parseInt(numStr);
+                            const func = funcionarios.find(f => parseInt(f.cadastro) === numInt);
+                            if (func) {
+                                funcionarioEncontrado = func;
+                                break; // Achou o funcionário desta linha
+                            }
+                        }
+                    }
+
+                    if (funcionarioEncontrado) {
+                        const matriculaInt = parseInt(funcionarioEncontrado.cadastro).toString();
+                        
+                        // Busca padrão (ex: 6x1)
+                        const matchPadrao = fullText.match(/\b\d{1}x\d{1}\b/i);
+                        const padrao = matchPadrao ? matchPadrao[0] : '6x1';
+
+                        // Busca Folga (F)
+                        let ultimaFolga = null;
+                        
+                        if (dateColumns.length > 0) {
+                            // Procura item "F" na linha que alinhe com alguma coluna de data
+                            for (const item of row.items) {
+                                if (item.text.toUpperCase().includes('F')) {
+                                    // Verifica alinhamento X
+                                    // O item.x deve estar dentro do range de alguma coluna
+                                    const itemCenter = item.x + (item.width || 10)/2;
+                                    
+                                    // Acha a coluna mais próxima
+                                    const col = dateColumns.find(c => itemCenter >= c.xStart && itemCenter <= c.xEnd);
+                                    
+                                    if (col) {
+                                        // Achou! Essa é uma data de folga.
+                                        // Atualiza ultimaFolga com a data encontrada.
+                                        // Como estamos processando da esquerda para a direita, a última encontrada será a mais recente (se cronológico)
+                                        ultimaFolga = col.date.toISOString().split('T')[0];
+                                    }
+                                }
+                            }
+                        }
+
+                        // Evita duplicatas (se o funcionário aparecer em mais de uma linha, atualiza ou ignora?)
+                        // Geralmente uma linha por funcionário. Se duplicar, assumimos a última info.
+                        const existingIdx = funcionariosImportados.findIndex(f => f.matriculaInt === matriculaInt);
+                        if (existingIdx !== -1) {
+                            funcionariosImportados[existingIdx] = {
+                                matriculaRaw: funcionarioEncontrado.cadastro,
+                                matriculaInt: matriculaInt,
+                                padrao: padrao,
+                                ultimaFolga: ultimaFolga || funcionariosImportados[existingIdx].ultimaFolga
+                            };
+                        } else {
+                            funcionariosImportados.push({
+                                matriculaRaw: funcionarioEncontrado.cadastro,
+                                matriculaInt: matriculaInt,
+                                padrao: padrao,
+                                ultimaFolga: ultimaFolga
+                            });
+                        }
+                    }
+                }
+
+                if (funcionariosImportados.length === 0) {
+                    showMessage('Nenhum funcionário identificado. Tente melhorar a qualidade ou formato.', 'warning');
+                    return;
+                }
+
+                // Prepara modal
+                abrirModalEscala();
+                document.getElementById('escala-nome').value = `Importada (${file.name}) - ${new Date().toLocaleDateString()}`;
+                
+                // Se detectou datas, preenche data inicio com a primeira data achada
+                if (dateColumns.length > 0) {
+                    // Ordena datas
+                    dateColumns.sort((a,b) => a.date - b.date);
+                    document.getElementById('escala-data-inicio').value = dateColumns[0].date.toISOString().split('T')[0];
+                }
+
+                const select = document.getElementById('escala-funcionarios');
+                Array.from(select.options).forEach(o => o.selected = false);
+                
+                let encontrados = 0;
+                let folgasDetectadas = 0;
+
+                // Armazena folgas temporariamente para salvar depois (pois o select multiplo só guarda ID)
+                window.funcionariosImportadosTemp = funcionariosImportados;
+
+                // 1. Marca os selecionados
+                funcionariosImportados.forEach(imp => {
+                    for (let j = 0; j < select.options.length; j++) {
+                        const optValue = select.options[j].value;
+                        if (parseInt(optValue).toString() === imp.matriculaInt) {
+                            select.options[j].selected = true;
+                            encontrados++;
+                            if (imp.ultimaFolga) folgasDetectadas++;
+                            break;
+                        }
+                    }
+                });
+
+                // 2. Filtra visualmente para mostrar APENAS os selecionados (importados)
+                if (encontrados > 0) {
+                    const select = document.getElementById('escala-funcionarios');
+                    const allOptions = Array.from(select.options);
+                    
+                    // Limpa o select
+                    select.innerHTML = '';
+                    
+                    // Adiciona APENAS os selecionados
+                    const selecionados = allOptions.filter(opt => opt.selected);
+                    selecionados.forEach(opt => {
+                        opt.textContent = '✅ ' + opt.textContent.replace('✅ ', '');
+                        opt.style.display = 'block';
+                        select.appendChild(opt);
+                    });
+
+                    // Guarda os outros em memória (não no DOM) para restaurar se precisar
+                    window.allFuncOptionsCache = allOptions;
+
+                    // Adiciona aviso visual
+                    const helpText = document.querySelector('#escala-funcionarios + p');
+                    if (helpText) {
+                        helpText.innerHTML = `Exibindo <b>${encontrados}</b> funcionários importados. <a href="#" onclick="restaurarListaFuncionarios(event)" class="text-blue-500 hover:underline">Mostrar todos</a>`;
+                    }
+                }
+
+                if (encontrados === 0) {
+                    showMessage('Matrículas detectadas não conferem com o cadastro.', 'warning');
+                } else {
+                    showMessage(`${encontrados} funcionários identificados. ${folgasDetectadas} datas de folga detectadas.`, 'success');
+                }
+
+            } catch (error) {
+                console.error('Erro na importação:', error);
+                showMessage('Erro crítico ao processar: ' + error.message, 'error');
+            } finally {
+                input.value = '';
+            }
+        }
+
+        function restaurarListaFuncionarios(e) {
+            if (e) e.preventDefault();
+            const select = document.getElementById('escala-funcionarios');
+            if (!select || !window.allFuncOptionsCache) return;
+            
+            // Restaura todos
+            select.innerHTML = '';
+            window.allFuncOptionsCache.forEach(opt => {
+                opt.textContent = opt.textContent.replace('✅ ', '');
+                opt.style.display = 'block';
+                select.appendChild(opt);
+            });
+            
+            const helpText = document.querySelector('#escala-funcionarios + p');
+            if (helpText) helpText.textContent = 'Dica: pesquise com Ctrl+F para localizar por nome';
+        }
+
+        async function salvarNovaEscala(e) {
+            e.preventDefault();
+            const nome = document.getElementById('escala-nome').value.trim();
+            const dataInicio = document.getElementById('escala-data-inicio').value;
+            const dias = parseInt(document.getElementById('escala-dias').value, 10);
+            const padrao = document.getElementById('escala-padrao').value;
+            const responsavel = document.getElementById('escala-responsavel').value.trim();
+            const sel = document.getElementById('escala-funcionarios');
+            
+            // Verifica se tem dados importados com folgas
+            const importados = window.funcionariosImportadosTemp || [];
+            
+            const funcionariosSel = Array.from(sel.selectedOptions).map(o => {
+                const matricula = o.value;
+                // Tenta achar dados importados para este funcionário
+                const imp = importados.find(i => parseInt(i.matriculaInt) === parseInt(matricula));
+                
+                return { 
+                    matricula: matricula, 
+                    // Se tiver importado, usa a folga detectada, senão null
+                    ultimaFolga: imp ? imp.ultimaFolga : null,
+                    padrao: imp ? imp.padrao : null
+                };
+            });
+            
+            // Limpa temp
+            window.funcionariosImportadosTemp = null;
+            
+            if (!nome || !dataInicio || !dias || funcionariosSel.length === 0) { 
+                showMessage('Preencha os campos e selecione pelo menos um funcionário', 'error'); 
+                return; 
+            }
+
+            const nova = { 
+                id: gerarIdLocal(), 
+                nome, 
+                dataInicio, 
+                dias, 
+                padrao, 
+                responsavel, 
+                funcionarios: funcionariosSel, 
+                createdAt: new Date().toISOString() 
+            };
+            
+            if (sb) {
+                const sucesso = await salvarNovaEscalaDB(nova);
+                if (!sucesso) return;
+                await carregarEscalas();
+            } else {
+                const escalas = carregarEscalasLocal();
+                escalas.push(nova);
+                salvarEscalasLocal(escalas);
+            }
+            
+            renderSelectEscalas();
+            
+            const escalasAtualizadas = sb ? escalasCache : carregarEscalasLocal();
+            const escalaCriada = escalasAtualizadas.find(e => e.nome === nome);
+            
+            const select = document.getElementById('select-escala');
+            if (select && escalaCriada) select.value = escalaCriada.id;
+            
+            if (escalaCriada) renderGridEscala(escalaCriada);
+            fecharModalEscala();
+            showMessage('Escala criada com sucesso!', 'success');
+        }
+
+        async function salvarEdicaoEscala(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-escala-id').value;
+            const nome = document.getElementById('edit-escala-nome').value.trim();
+            const dataInicio = document.getElementById('edit-escala-data-inicio').value;
+            const dias = parseInt(document.getElementById('edit-escala-dias').value, 10);
+            const padrao = document.getElementById('edit-escala-padrao').value;
+            const responsavel = document.getElementById('edit-escala-responsavel').value.trim();
+
+            if (!nome || !dataInicio || !dias) {
+                showMessage('Preencha os campos obrigatórios.', 'error');
+                return;
+            }
+
+            const escalas = sb ? escalasCache : carregarEscalasLocal();
+            const index = escalas.findIndex(e => e.id === id);
+            
+            if (index !== -1) {
+                const escalaAtualizada = {
+                    ...escalas[index],
+                    nome,
+                    dataInicio,
+                    dias,
+                    padrao,
+                    responsavel
+                };
+
+                if (sb) {
+                    const sucesso = await atualizarEscalaDB(escalaAtualizada);
+                    if (!sucesso) { showMessage('Erro ao salvar edição no banco.', 'error'); return; }
+                    await carregarEscalas(); // Refresh
+                } else {
+                    escalas[index] = escalaAtualizada;
+                    salvarEscalasLocal(escalas);
+                }
+
+                renderSelectEscalas();
+                const select = document.getElementById('select-escala');
+                if (select) select.value = id;
+                
+                // Busca a versão atualizada
+                const novaVersao = (sb ? escalasCache : escalas).find(e => e.id === id);
+                renderGridEscala(novaVersao);
+                
+                fecharModalEditarEscala();
+                showMessage('Escala atualizada com sucesso!', 'success');
+            }
+        }
+
+        async function excluirEscalaAtual() {
+            const select = document.getElementById('select-escala');
+            if (!select || !select.value) {
+                showMessage('Selecione uma escala para excluir.', 'warning');
+                return;
+            }
+            if (!confirm('Tem certeza que deseja excluir esta escala e todos os seus dados? Esta ação não pode ser desfeita.')) return;
+            
+            const escalaId = select.value;
+            
+            if (sb) {
+                const sucesso = await excluirEscalaDB(escalaId);
+                if (!sucesso) { showMessage('Erro ao excluir do banco.', 'error'); return; }
+                await carregarEscalas();
+            } else {
+                let escalas = carregarEscalasLocal();
+                escalas = escalas.filter(e => e.id !== escalaId);
+                salvarEscalasLocal(escalas);
+            }
+            
+            renderSelectEscalas();
+            document.getElementById('escala-thead').innerHTML = '';
+            document.getElementById('escala-tbody').innerHTML = '';
+            document.getElementById('escala-titulo').textContent = 'Nenhuma escala selecionada';
+            document.getElementById('escala-subtitulo').textContent = '';
+            
+            showMessage('Escala excluída com sucesso.', 'success');
+        }
+
         // ===== INICIALIZAÇÃO =====
         document.addEventListener('DOMContentLoaded', async function() {
             try { if (!localStorage.getItem('adminPasswordHash')) { await setAdminPassword('Guto1006'); } } catch (e) {}
@@ -2960,6 +5819,25 @@
             // Submit do formulário de edição de funcionário
             document.getElementById('form-editar-funcionario').addEventListener('submit', salvarEdicaoFuncionario);
             
+            // Listeners da Escala
+            document.getElementById('form-escala').addEventListener('submit', salvarNovaEscala);
+            document.getElementById('form-editar-escala').addEventListener('submit', salvarEdicaoEscala);
+            document.getElementById('btn-recarregar-escala').addEventListener('click', async () => {
+                await renderSelectEscalas();
+                const sel = document.getElementById('select-escala');
+                if (sel && sel.value) {
+                    const escalas = await carregarEscalas();
+                    const esc = escalas.find(e => e.id === sel.value);
+                    renderGridEscala(esc);
+                }
+            });
+            document.getElementById('select-escala').addEventListener('change', async (e) => {
+                const id = e.target.value;
+                const escalas = await carregarEscalas();
+                const esc = escalas.find(x => x.id === id);
+                renderGridEscala(esc);
+            });
+
             // Enter para consultar faltas
             document.getElementById('consulta-matricula').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') consultarFaltas();
@@ -3002,12 +5880,12 @@
         }
 
         // ===== FUNÇÕES DE NAVEGAÇÃO =====
-        const TAB_IDS = ['dashboard', 'funcionarios', 'registro', 'consulta', 'historico', 'relatorios', 'configuracao', 'admin'];
+        const TAB_IDS = ['dashboard', 'funcionarios', 'escala', 'registro', 'consulta', 'historico', 'relatorios', 'configuracao', 'admin'];
 
         function getContent(id) { return document.getElementById(`${id}-content`); }
         function getButton(id) { return document.getElementById(`tab-${id}`); }
 
-        function showTab(tabId) {
+        async function showTab(tabId) {
             // Remover estado ativo atual
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
@@ -3049,6 +5927,14 @@
                 if (session && !historicoLoadedFromDB) carregarHistoricoDB();
             } else if (tabId === 'funcionarios') {
                 carregarFuncionarios();
+            } else if (tabId === 'escala') {
+                await renderSelectEscalas(); // Agora é async
+                const sel = document.getElementById('select-escala');
+                if (sel && sel.value) {
+                    const escalas = await carregarEscalas(); // Garante dados frescos
+                    const esc = escalas.find(e => e.id === sel.value);
+                    renderGridEscala(esc);
+                }
             } else if (tabId === 'relatorios') {
                 carregarOpcoesFrente();
             } else if (tabId === 'registro') {
@@ -4450,41 +7336,45 @@
         }
 
         function verificarCNHVencidas() {
-            if (!funcionarios || funcionarios.length === 0) return;
+            // Verifica última notificação para não spammar
+            const lastCheck = localStorage.getItem('last_vencimento_check');
+            const now = Date.now();
+            const THREE_HOURS = 3 * 60 * 60 * 1000;
 
-            const motoristas = funcionarios.filter(f => f.cargo && f.cargo.toLowerCase().includes('motorista'));
+            if (lastCheck && (now - parseInt(lastCheck)) < THREE_HOURS) {
+                console.log('Verificação de vencimentos pulada (frequência limitada a 3h)');
+                return;
+            }
+
+            // Atualiza timestamp
+            try { localStorage.setItem('last_vencimento_check', now.toString()); } catch(e){}
+
             const hoje = new Date();
-            const trintaDiasDepois = new Date();
+            const trintaDiasDepois = new Date(hoje);
             trintaDiasDepois.setDate(hoje.getDate() + 30);
-
+            
+            const alertasCriticos = [];
             const alertasNormais = [];
-            const alertasCriticos = []; // CNHs vencidas
 
-            motoristas.forEach(m => {
-                if (!m.cnhNumero || !m.cnhVencimento) {
-                    alertasNormais.push({
-                        tipo: 'pendencia',
-                        msg: `${m.nome}: Dados da CNH incompletos.`,
-                        cadastro: m.cadastro
-                    });
+            if (!funcionarios || !Array.isArray(funcionarios)) return;
+
+            funcionarios.forEach(m => {
+                // Check CNH
+                if (!m.cnhNumero) {
+                    // Sem CNH cadastrada
+                } else if (!m.cnhVencimento) {
+                    // Dados incompletos - ignora alerta
                 } else {
                     const vencimento = new Date(m.cnhVencimento);
-                    // Reset time part for accurate date comparison
+                    // Zera hora para comparar apenas datas
                     vencimento.setHours(0, 0, 0, 0);
-                    hoje.setHours(0, 0, 0, 0);
+                    const hojeZero = new Date();
+                    hojeZero.setHours(0,0,0,0);
                     
-                    if (vencimento < hoje) {
-                        // Vencida: alerta crítico (modal)
+                    if (vencimento < hojeZero) {
                         alertasCriticos.push({
                             nome: m.nome,
                             vencimento: m.cnhVencimento.split('-').reverse().join('/'),
-                            cadastro: m.cadastro
-                        });
-
-                        // Também mantém no alerta lateral para referência
-                        alertasNormais.push({
-                            tipo: 'vencida',
-                            msg: `${m.nome}: CNH vencida em ${m.cnhVencimento.split('-').reverse().join('/')}.`,
                             cadastro: m.cadastro
                         });
                     } else if (vencimento <= trintaDiasDepois) {
@@ -4502,7 +7392,8 @@
             }
 
             if (alertasNormais.length > 0) {
-                mostrarAlertaCNH(alertasNormais);
+                // Implementar mostrarAlertaCNH se não existir, ou remover chamada se não for necessário
+                if (typeof mostrarAlertaCNH === 'function') mostrarAlertaCNH(alertasNormais);
             }
         }
 
@@ -5146,6 +8037,7 @@
                 funcionarios: funcionarios,
                 faltas: faltas,
                 historico: historico,
+                escalas: carregarEscalas(),
                 exportadoEm: new Date().toISOString()
             };
             
@@ -5160,6 +8052,33 @@
             URL.revokeObjectURL(url);
             
             showMessage('Backup exportado com sucesso!', 'success');
+        }
+
+        function limparCacheLocal() {
+            if (!confirm('Isso limpará logs de histórico antigos e otimizará o armazenamento local para liberar espaço.\n\nDados importantes como funcionários, faltas e escalas NÃO serão apagados.\n\nDeseja continuar?')) return;
+
+            try {
+                // 1. Limpa histórico mantendo apenas os 50 últimos
+                const historicoAtual = JSON.parse(localStorage.getItem('historico') || '[]');
+                const tamanhoOriginal = JSON.stringify(historicoAtual).length;
+                
+                let historicoNovo = historicoAtual;
+                if (historicoAtual.length > 50) {
+                     historicoNovo = historicoAtual.slice(0, 50);
+                }
+                
+                localStorage.setItem('historico', JSON.stringify(historicoNovo));
+                historico = historicoNovo; // Atualiza variável global
+                
+                const tamanhoNovo = JSON.stringify(historicoNovo).length;
+                const economia = Math.round((tamanhoOriginal - tamanhoNovo) / 1024);
+
+                renderHistorico();
+                showMessage(`Cache limpo com sucesso! Liberados aprox. ${economia}KB.`, 'success');
+            } catch (e) {
+                console.error('Erro ao limpar cache:', e);
+                showMessage('Erro ao tentar limpar cache: ' + e.message, 'error');
+            }
         }
 
         function importarBackup(event) {
